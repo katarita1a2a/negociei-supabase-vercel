@@ -8,7 +8,7 @@ import { DemandStatus } from '../types';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { demands, offers } = useDemands();
+  const { demands, offers, isLoading } = useDemands();
 
   // Metrics calculation
   const myDemands = demands.filter(d => d.ownerId === user?.id);
@@ -34,6 +34,17 @@ const DashboardPage: React.FC = () => {
       conversionRate: totalOffersSent > 0 ? (acceptedOffers / totalOffersSent * 100).toFixed(1) : 0
     };
   }, [myDemands, myOffers]);
+
+  if (isLoading) {
+    return (
+      <Layout showSidebar={false}>
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold mt-4 animate-pulse uppercase tracking-widest text-xs">Carregando painel...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout showSidebar={false}>

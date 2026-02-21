@@ -15,10 +15,26 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (window.confirm('Confirmar o fechamento deste negócio com este fornecedor?')) {
-      acceptOffer(offer.id);
-      setTimeout(() => navigate(`/demanda/${offer.demandId}/pedido`), 500);
+      try {
+        await acceptOffer(offer.id);
+        navigate(`/demanda/${offer.demandId}/pedido`);
+      } catch (err) {
+        console.error('Error accepting offer:', err);
+        alert("Erro ao aceitar a proposta. Por favor, tente novamente.");
+      }
+    }
+  };
+
+  const handleReject = async () => {
+    if (window.confirm('Deseja realmente rejeitar esta proposta?')) {
+      try {
+        await rejectOffer(offer.id);
+      } catch (err) {
+        console.error('Error rejecting offer:', err);
+        alert("Erro ao rejeitar a proposta.");
+      }
     }
   };
 
@@ -98,14 +114,14 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
         <div className="space-y-4 pt-4 border-t border-slate-100">
           <div className="flex items-center justify-between px-1">
             <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comparativo de Itens</h5>
-            <button 
+            <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
             >
               {isExpanded ? 'Ocultar' : 'Ver Detalhes'}
             </button>
           </div>
-          
+
           <div className="space-y-2">
             {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => (
               <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100/50">
@@ -129,15 +145,15 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
         <div className="grid grid-cols-2 gap-4 mt-auto pt-4">
           {offer.status === 'pending' ? (
             <>
-              <button 
-                onClick={() => rejectOffer(offer.id)} 
+              <button
+                onClick={handleReject}
                 className="h-12 rounded-xl border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
                 Rejeitar
               </button>
-              <button 
-                onClick={handleAccept} 
+              <button
+                onClick={handleAccept}
                 className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">check</span>
@@ -146,7 +162,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
             </>
           ) : offer.status === 'accepted' ? (
             <Link to={`/demanda/${offer.demandId}/pedido`} className="col-span-2 h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
-               <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
+              <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
             </Link>
           ) : (
             <div className="col-span-2 h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">

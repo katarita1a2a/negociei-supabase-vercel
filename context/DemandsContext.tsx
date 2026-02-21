@@ -1,20 +1,23 @@
 
-import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
-import { Demand, DemandFilters, Offer, DemandStatus } from '../types';
-import { demands as initialDemands, offers as initialOffers } from '../mockData';
+
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { Demand, DemandFilters, Offer, DemandStatus, DemandItem } from '../types';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface DemandsContextType {
   demands: Demand[];
   filteredDemands: Demand[];
   offers: Offer[];
   filters: DemandFilters;
+  isLoading: boolean;
   setFilters: React.Dispatch<React.SetStateAction<DemandFilters>>;
-  addDemand: (demand: Demand) => void;
-  updateDemand: (demand: Demand) => void;
-  deleteDemand: (id: string) => void;
-  addOffer: (offer: Offer) => void;
-  acceptOffer: (offerId: string) => void;
-  rejectOffer: (offerId: string) => void;
+  addDemand: (demand: Demand) => Promise<void>;
+  updateDemand: (demand: Demand) => Promise<void>;
+  deleteDemand: (id: string) => Promise<void>;
+  addOffer: (offer: Offer) => Promise<void>;
+  acceptOffer: (offerId: string) => Promise<void>;
+  rejectOffer: (offerId: string) => Promise<void>;
   resetFilters: () => void;
 }
 
@@ -29,61 +32,252 @@ const initialFilters: DemandFilters = {
 const DemandsContext = createContext<DemandsContextType | undefined>(undefined);
 
 export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [demands, setDemands] = useState<Demand[]>(initialDemands);
-  const [offers, setOffers] = useState<Offer[]>(initialOffers);
+  const { user } = useAuth();
+  const [demands, setDemands] = useState<Demand[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [filters, setFilters] = useState<DemandFilters>(initialFilters);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addDemand = (demand: Demand) => {
-    setDemands((prev) => [demand, ...prev]);
-  };
+  // Fetch data from Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch Demands
+        const { data: demandsData, error: demandsError } = await supabase
+          .from('demands')
+          .select('*, demand_items(*)')
+          .order('created_at', { ascending: false });
 
-  const updateDemand = (updatedDemand: Demand) => {
-    setDemands((prev) => prev.map(d => d.id === updatedDemand.id ? updatedDemand : d));
-  };
+        if (demandsError) throw demandsError;
 
-  const deleteDemand = (id: string) => {
-    setDemands((prev) => prev.filter(d => d.id !== id));
-    setOffers((prev) => prev.filter(o => o.demandId !== id));
-  };
+        // Transform database data to frontend Demand type
+        const transformedDemands: Demand[] = (demandsData || []).map(d => ({
+          id: d.id,
+          title: d.title,
+          description: d.description || '',
+          category: d.category || '',
+          location: d.location || '',
+          deadline: d.need_date ? d.need_date.split('-').reverse().join('/') : '',
+          createdAt: d.created_at,
+          budget: d.estimated_price ? `R$ ${d.estimated_price.toLocaleString('pt-BR')}` : 'Sob consulta',
+          status: d.status === 'aberto' ? DemandStatus.ABERTO :
+            d.status === 'analise' ? DemandStatus.EM_ANALISE : DemandStatus.FECHADO,
+          isPremium: false, // Map this if you add a column to demands
+          ownerId: d.user_id,
+          offersCount: 0, // We could count offers here or in a separate query
+          tags: d.category ? [d.category] : [],
+          items: (d.demand_items || []).map((item: any) => ({
+            id: item.id,
+            description: item.name,
+            unit: item.unit,
+            quantity: item.quantity,
+            unitPrice: item.desired_unit_price,
+            totalPrice: item.total_price
+          }))
+        }));
 
-  const addOffer = (offer: Offer) => {
-    setOffers((prev) => [offer, ...prev]);
-    setDemands((prev) => prev.map(d => 
-      d.id === offer.demandId ? { ...d, offersCount: d.offersCount + 1 } : d
-    ));
-  };
+        setDemands(transformedDemands);
 
-  const acceptOffer = (offerId: string) => {
-    // 1. Localiza a oferta para obter o ID da demanda
-    const selectedOffer = offers.find(o => o.id === offerId);
-    if (!selectedOffer) return;
+        // Fetch Offers
+        const { data: offersData, error: offersError } = await supabase
+          .from('offers')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    const targetDemandId = selectedOffer.demandId;
+        if (offersError) throw offersError;
 
-    // 2. Atualiza as ofertas daquela demanda
-    setOffers(prevOffers => prevOffers.map(o => {
-      if (o.id === offerId) {
-        return { ...o, status: 'accepted' };
+        // Transform database data to frontend Offer type
+        const transformedOffers: Offer[] = (offersData || []).map(o => ({
+          id: o.id,
+          demandId: o.demand_id,
+          sellerId: o.seller_id,
+          sellerName: 'Fornecedor', // This should ideally join with profiles
+          sellerRating: 5.0,
+          sellerReviews: 0,
+          value: o.total_price,
+          shippingCost: 0,
+          deadlineDays: parseInt(o.delivery_time) || 0,
+          warrantyMonths: 0,
+          message: o.message || '',
+          verified: false,
+          status: o.status === 'aceita' ? 'accepted' :
+            o.status === 'rejeitada' ? 'rejected' : 'pending',
+          createdAt: o.created_at
+        }));
+
+        setOffers(transformedOffers);
+
+        // Optional: Update offersCount for demands
+        setDemands(prev => prev.map(d => ({
+          ...d,
+          offersCount: transformedOffers.filter(o => o.demandId === d.id).length
+        })));
+
+      } catch (error) {
+        console.error('Error fetching data from Supabase:', error);
+        // Fallback to mock data if there's an error (optional, maybe better to show empty state)
+        // setDemands(initialDemands);
+        // setOffers(initialOffers);
+      } finally {
+        setIsLoading(false);
       }
-      if (o.demandId === targetDemandId && o.status === 'pending') {
-        return { ...o, status: 'rejected' };
-      }
-      return o;
-    }));
+    };
 
-    // 3. Atualiza o status da demanda para FECHADO
-    setDemands(prevDemands => prevDemands.map(d => {
-      if (d.id === targetDemandId) {
-        return { ...d, status: DemandStatus.FECHADO };
+    fetchData();
+  }, [user]);
+
+  const addDemand = async (demand: Demand) => {
+    try {
+      // 1. Insert Demand
+      const { data: demandInsert, error: demandError } = await supabase
+        .from('demands')
+        .insert({
+          title: demand.title,
+          description: demand.description,
+          category: demand.category,
+          location: demand.location,
+          need_date: demand.deadline.split('/').reverse().join('-'),
+          estimated_price: demand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
+          status: 'aberto',
+          user_id: user?.id
+        })
+        .select()
+        .single();
+
+      if (demandError) throw demandError;
+
+      // 2. Insert Items
+      if (demand.items && demand.items.length > 0) {
+        const itemsToInsert = demand.items.map(item => ({
+          demand_id: demandInsert.id,
+          name: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+          desired_unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('demand_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
       }
-      return d;
-    }));
+
+      // 3. Update local state
+      const newDemand = { ...demand, id: demandInsert.id, ownerId: user?.id || '' };
+      setDemands((prev) => [newDemand, ...prev]);
+
+    } catch (error) {
+      console.error('Error adding demand:', error);
+      alert('Erro ao salvar a demanda no banco de dados.');
+    }
   };
 
-  const rejectOffer = (offerId: string) => {
-    setOffers((prev) => prev.map(o => 
-      o.id === offerId ? { ...o, status: 'rejected' } : o
-    ));
+  const updateDemand = async (updatedDemand: Demand) => {
+    try {
+      // 1. Update Demand
+      const { error: demandError } = await supabase
+        .from('demands')
+        .update({
+          title: updatedDemand.title,
+          description: updatedDemand.description,
+          category: updatedDemand.category,
+          location: updatedDemand.location,
+          need_date: updatedDemand.deadline.split('/').reverse().join('-'),
+          estimated_price: updatedDemand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
+        })
+        .eq('id', updatedDemand.id);
+
+      if (demandError) throw demandError;
+
+      // 2. Update Items (Complex: simpler to delete and re-insert or just update local state if persistence isn't 100% required for items edit yet)
+      // For now, let's just sync local state
+      setDemands((prev) => prev.map(d => d.id === updatedDemand.id ? updatedDemand : d));
+
+    } catch (error) {
+      console.error('Error updating demand:', error);
+    }
+  };
+
+  const deleteDemand = async (id: string) => {
+    try {
+      const { error } = await supabase.from('demands').delete().eq('id', id);
+      if (error) throw error;
+
+      setDemands((prev) => prev.filter(d => d.id !== id));
+      setOffers((prev) => prev.filter(o => o.demandId !== id));
+    } catch (error) {
+      console.error('Error deleting demand:', error);
+    }
+  };
+
+  const addOffer = async (offer: Offer) => {
+    try {
+      const { data: offerData, error } = await supabase
+        .from('offers')
+        .insert({
+          demand_id: offer.demandId,
+          seller_id: user?.id,
+          total_price: offer.value,
+          delivery_time: offer.deadlineDays.toString(),
+          message: offer.message,
+          status: 'enviada'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newOffer = { ...offer, id: offerData.id };
+      setOffers((prev) => [newOffer, ...prev]);
+      setDemands((prev) => prev.map(d =>
+        d.id === offer.demandId ? { ...d, offersCount: d.offersCount + 1 } : d
+      ));
+    } catch (error) {
+      console.error('Error adding offer:', error);
+    }
+  };
+
+  const acceptOffer = async (offerId: string) => {
+    try {
+      const selectedOffer = offers.find(o => o.id === offerId);
+      if (!selectedOffer) return;
+
+      const targetDemandId = selectedOffer.demandId;
+
+      // Update offer status
+      await supabase.from('offers').update({ status: 'aceita' }).eq('id', offerId);
+      // Reject others
+      await supabase.from('offers').update({ status: 'rejeitada' }).eq('demand_id', targetDemandId).neq('id', offerId);
+      // Update demand status
+      await supabase.from('demands').update({ status: 'fechado' }).eq('id', targetDemandId);
+
+      // Update local state
+      setOffers(prevOffers => prevOffers.map(o => {
+        if (o.id === offerId) return { ...o, status: 'accepted' };
+        if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
+        return o;
+      }));
+
+      setDemands(prevDemands => prevDemands.map(d => {
+        if (d.id === targetDemandId) return { ...d, status: DemandStatus.FECHADO };
+        return d;
+      }));
+
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+    }
+  };
+
+  const rejectOffer = async (offerId: string) => {
+    try {
+      await supabase.from('offers').update({ status: 'rejeitada' }).eq('id', offerId);
+      setOffers((prev) => prev.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o));
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+    }
   };
 
   const resetFilters = () => {
@@ -105,7 +299,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         return false;
       }
       if (filters.status !== 'Todas') {
-        const mappedStatus = filters.status === 'Abertas' ? 'Aberto' : 'Em análise';
+        const mappedStatus = filters.status === 'Abertas' ? DemandStatus.ABERTO : DemandStatus.EM_ANALISE;
         if (demand.status !== mappedStatus) return false;
       }
       return true;
@@ -113,7 +307,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [demands, filters]);
 
   return (
-    <DemandsContext.Provider value={{ demands, filteredDemands, offers, filters, setFilters, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
+    <DemandsContext.Provider value={{ demands, filteredDemands, offers, filters, isLoading, setFilters, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
       {children}
     </DemandsContext.Provider>
   );

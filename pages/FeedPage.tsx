@@ -6,14 +6,14 @@ import DemandListItem from '../components/DemandListItem';
 import { useDemands } from '../context/DemandsContext';
 
 const FeedPage: React.FC = () => {
-  const { filteredDemands } = useDemands();
+  const { filteredDemands, isLoading } = useDemands();
   const [isBannerVisible, setIsBannerVisible] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('recent');
 
   const sortedDemands = useMemo(() => {
     const result = [...filteredDemands];
-    
+
     if (sortBy === 'recent') {
       result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } else if (sortBy === 'budget') {
@@ -26,9 +26,20 @@ const FeedPage: React.FC = () => {
       };
       result.sort((a, b) => parseDate(a.deadline) - parseDate(b.deadline));
     }
-    
+
     return result;
   }, [filteredDemands, sortBy]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold mt-4 animate-pulse uppercase tracking-widest text-xs">Carregando oportunidades...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -37,7 +48,7 @@ const FeedPage: React.FC = () => {
         {isBannerVisible ? (
           <section className="bg-white rounded-2xl border border-slate-200 shadow-soft overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="p-8 relative">
-              <button 
+              <button
                 onClick={() => setIsBannerVisible(false)}
                 className="absolute top-6 right-6 text-slate-300 hover:text-slate-900 transition-colors"
                 aria-label="Fechar guia"
@@ -49,14 +60,14 @@ const FeedPage: React.FC = () => {
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2 text-primary font-black uppercase text-xs tracking-widest">
                     <span className="material-symbols-outlined text-[20px] fill-1">tips_and_updates</span>
-                     Marketplace Reverso
+                    Marketplace Reverso
                   </div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">Onde quem manda é o comprador</h2>
                   <p className="text-slate-500 leading-relaxed text-sm max-w-xl">
                     No <span className="font-bold text-slate-900">Negociei.app</span> você descreve sua necessidade e os fornecedores competem para oferecer o melhor preço e prazo. Simples, rápido e inteligente.
                   </p>
                 </div>
-                
+
                 <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-8 lg:border-l lg:border-slate-100 lg:pl-10">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 size-10 rounded-full bg-primary/5 text-primary flex items-center justify-center font-black">1</div>
@@ -85,7 +96,7 @@ const FeedPage: React.FC = () => {
           </section>
         ) : (
           <div className="flex justify-start">
-            <button 
+            <button
               onClick={() => setIsBannerVisible(true)}
               className="group text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 hover:text-primary transition-all bg-white px-5 py-2 rounded-full border border-slate-200 shadow-soft"
             >
@@ -101,17 +112,17 @@ const FeedPage: React.FC = () => {
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Feed de Demandas</h1>
             <p className="text-sm text-slate-500 font-medium">Explorando <span className="text-slate-900 font-bold">{sortedDemands.length}</span> oportunidades em tempo real</p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
-              <button 
+              <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-slate-100 text-primary' : 'text-slate-300 hover:text-slate-500'}`}
                 title="Visualização em Grade"
               >
                 <span className="material-symbols-outlined text-[20px]">grid_view</span>
               </button>
-              <button 
+              <button
                 onClick={() => setViewMode('list')}
                 className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-primary' : 'text-slate-300 hover:text-slate-500'}`}
                 title="Visualização em Lista"
@@ -119,7 +130,7 @@ const FeedPage: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">view_list</span>
               </button>
             </div>
-            <select 
+            <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="form-select h-11 pl-4 pr-10 py-2 text-[10px] font-black uppercase tracking-widest border-slate-200 focus:ring-primary rounded-xl bg-white shadow-sm cursor-pointer"
@@ -135,8 +146,8 @@ const FeedPage: React.FC = () => {
         {sortedDemands.length > 0 ? (
           <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8" : "flex flex-col gap-4"}>
             {sortedDemands.map((demand) => (
-              viewMode === 'grid' 
-                ? <DemandCard key={demand.id} demand={demand} /> 
+              viewMode === 'grid'
+                ? <DemandCard key={demand.id} demand={demand} />
                 : <DemandListItem key={demand.id} demand={demand} />
             ))}
           </div>

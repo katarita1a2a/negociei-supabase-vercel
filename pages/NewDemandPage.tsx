@@ -42,6 +42,7 @@ const NewDemandPage: React.FC = () => {
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [items, setItems] = useState<DemandItem[]>([
     { id: crypto.randomUUID(), description: '', unit: 'un', quantity: 1, unitPrice: 0, totalPrice: 0 },
@@ -159,40 +160,48 @@ const NewDemandPage: React.FC = () => {
   const subtotal = useMemo(() => items.reduce((acc, curr) => acc + curr.totalPrice, 0), [items]);
   const total = subtotal + shippingCost;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCity || !selectedState) {
       alert("Por favor, selecione Estado e Cidade.");
       return;
     }
 
-    const demandData: Demand = {
-      id: id || `DEM-${Date.now()}`,
-      title,
-      description,
-      category,
-      location: `${selectedCity}, ${selectedState}`,
-      deadline: deliveryDate.split('-').reverse().join('/'),
-      budget: `R$ ${total.toLocaleString('pt-BR')}`,
-      shippingCost,
-      status: DemandStatus.ABERTO,
-      isPremium: false,
-      ownerId: user?.id || 'anonymous',
-      userName: user?.user_metadata?.full_name || 'Usuário',
-      userAvatar: user?.user_metadata?.avatar_url || '',
-      offersCount: isEditing ? (demands.find(d => d.id === id)?.offersCount || 0) : 0,
-      createdAt: isEditing ? (demands.find(d => d.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
-      tags: [category],
-      items,
-      images: uploadedImages
-    };
+    setIsSubmitting(true);
+    try {
+      const demandData: Demand = {
+        id: id || `DEM-${Date.now()}`,
+        title,
+        description,
+        category,
+        location: `${selectedCity}, ${selectedState}`,
+        deadline: deliveryDate.split('-').reverse().join('/'),
+        budget: `R$ ${total.toLocaleString('pt-BR')}`,
+        shippingCost,
+        status: DemandStatus.ABERTO,
+        isPremium: false,
+        ownerId: user?.id || 'anonymous',
+        userName: user?.user_metadata?.full_name || 'Usuário',
+        userAvatar: user?.user_metadata?.avatar_url || '',
+        offersCount: isEditing ? (demands.find(d => d.id === id)?.offersCount || 0) : 0,
+        createdAt: isEditing ? (demands.find(d => d.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+        tags: [category],
+        items,
+        images: uploadedImages
+      };
 
-    if (isEditing) {
-      updateDemand(demandData);
-    } else {
-      addDemand(demandData);
+      if (isEditing) {
+        await updateDemand(demandData);
+      } else {
+        await addDemand(demandData);
+      }
+      navigate('/minhas-demandas');
+    } catch (err) {
+      console.error('Error saving demand:', err);
+      alert("Erro ao salvar a demanda. Por favor, tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
-    navigate('/minhas-demandas');
   };
 
   return (
@@ -378,9 +387,18 @@ const NewDemandPage: React.FC = () => {
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">({items.length} ITENS + R$ {shippingCost.toLocaleString('pt-BR')} FRETE)</p>
                 </div>
 
-                <button type="submit" className="w-full md:w-auto h-16 px-12 bg-primary text-white font-black rounded-2xl hover:bg-blue-600 shadow-2xl shadow-primary/40 transition-all transform active:scale-95 text-lg flex items-center justify-center gap-3 group">
-                  {isEditing ? 'ATUALIZAR DEMANDA' : 'LANÇAR DEMANDA'}
-                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">rocket_launch</span>
+                <button type="submit" disabled={isSubmitting} className="w-full md:w-auto h-16 px-12 bg-primary text-white font-black rounded-2xl hover:bg-blue-600 shadow-2xl shadow-primary/40 transition-all transform active:scale-95 text-lg flex items-center justify-center gap-3 group disabled:opacity-70 disabled:cursor-not-allowed">
+                  {isSubmitting ? (
+                    <>
+                      SALVANDO...
+                      <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </>
+                  ) : (
+                    <>
+                      {isEditing ? 'ATUALIZAR DEMANDA' : 'LANÇAR DEMANDA'}
+                      <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">rocket_launch</span>
+                    </>
+                  )}
                 </button>
               </div>
 

@@ -19,6 +19,7 @@ const DemandDetailPage: React.FC = () => {
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (demand?.items) {
@@ -46,7 +47,7 @@ const DemandDetailPage: React.FC = () => {
     return itemsSum + shippingCost;
   }, [demand.items, itemPrices, shippingCost]);
 
-  const handleSendOffer = () => {
+  const handleSendOffer = async () => {
     const newOffer: Offer = {
       id: `OFF-${Date.now()}`,
       demandId: demand.id,
@@ -64,8 +65,17 @@ const DemandDetailPage: React.FC = () => {
       createdAt: new Date().toISOString(),
       items: demand.items?.map(i => ({ ...i, unitPrice: itemPrices[i.id], totalPrice: itemPrices[i.id] * i.quantity }))
     };
-    addOffer(newOffer);
-    navigate('/ofertas');
+
+    setIsSubmitting(true);
+    try {
+      await addOffer(newOffer);
+      navigate('/ofertas');
+    } catch (err) {
+      console.error('Error sending offer:', err);
+      alert("Erro ao enviar a proposta. Por favor, tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -86,8 +96,8 @@ const DemandDetailPage: React.FC = () => {
 
         {/* Content Header Compacto */}
         <header className={`p-8 rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden ${demand.isPremium
-            ? 'bg-white border-amber-200 shadow-xl shadow-amber-500/5'
-            : 'bg-white border-slate-100 shadow-soft'
+          ? 'bg-white border-amber-200 shadow-xl shadow-amber-500/5'
+          : 'bg-white border-slate-100 shadow-soft'
           }`}>
           {demand.isPremium && (
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50 rounded-full blur-[100px] -z-0"></div>
@@ -96,8 +106,8 @@ const DemandDetailPage: React.FC = () => {
           <div className="relative z-10 space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${demand.isPremium
-                  ? 'bg-amber-100/50 text-amber-700 border-amber-200'
-                  : 'bg-slate-50 text-slate-500 border-slate-100'
+                ? 'bg-amber-100/50 text-amber-700 border-amber-200'
+                : 'bg-slate-50 text-slate-500 border-slate-100'
                 }`}>
                 {demand.category}
               </span>
@@ -349,12 +359,23 @@ const DemandDetailPage: React.FC = () => {
                 </div>
 
                 <button
-                  disabled={alreadyHasOffer || offerTotal === 0}
+                  disabled={alreadyHasOffer || offerTotal === 0 || isSubmitting}
                   onClick={handleSendOffer}
                   className="w-full h-16 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
                 >
-                  {alreadyHasOffer ? 'OFERTA JÁ ENVIADA' : 'ENVIAR PROPOSTA AGORA'}
-                  {!alreadyHasOffer && <span className="material-symbols-outlined text-2xl">send</span>}
+                  {isSubmitting ? (
+                    <>
+                      ENVIANDO...
+                      <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </>
+                  ) : alreadyHasOffer ? (
+                    'OFERTA JÁ ENVIADA'
+                  ) : (
+                    <>
+                      ENVIAR PROPOSTA AGORA
+                      <span className="material-symbols-outlined text-2xl">send</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
