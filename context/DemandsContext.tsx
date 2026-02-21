@@ -41,8 +41,10 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Fetch data from Supabase
   useEffect(() => {
     const fetchData = async () => {
+      console.log('DemandsContext: Starting fetchData...');
       setIsLoading(true);
       try {
+        console.log('DemandsContext: Using Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
         // Fetch Demands
         const { data: demandsData, error: demandsError } = await supabase
           .from('demands')
@@ -50,6 +52,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           .order('created_at', { ascending: false });
 
         if (demandsError) throw demandsError;
+        console.log('DemandsContext: Fetched demandsData:', demandsData);
 
         // Transform database data to frontend Demand type
         const transformedDemands: Demand[] = (demandsData || []).map(d => ({
@@ -145,6 +148,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         .select()
         .single();
 
+      console.log('!!! ADD DEMAND ATTEMPT !!!', { demand, userId: user?.id });
       console.log('Insert Attempt Result:', { demandInsert, demandError });
 
       if (demandError) {
