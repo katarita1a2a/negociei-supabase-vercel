@@ -196,9 +196,9 @@ const NewDemandPage: React.FC = () => {
         await addDemand(demandData);
       }
       navigate('/minhas-demandas');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving demand:', err);
-      alert("Erro ao salvar a demanda. Por favor, tente novamente.");
+      alert(`Erro ao salvar a demanda: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setIsSubmitting(false);
     }

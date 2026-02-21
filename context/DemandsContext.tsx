@@ -145,7 +145,12 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         .select()
         .single();
 
-      if (demandError) throw demandError;
+      console.log('Insert Attempt Result:', { demandInsert, demandError });
+
+      if (demandError) {
+        console.error('Supabase Insert Error:', demandError);
+        throw new Error(demandError.message);
+      }
 
       // 2. Insert Items
       if (demand.items && demand.items.length > 0) {
@@ -171,7 +176,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     } catch (error) {
       console.error('Error adding demand:', error);
-      alert('Erro ao salvar a demanda no banco de dados.');
+      throw error;
     }
   };
 
@@ -198,6 +203,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     } catch (error) {
       console.error('Error updating demand:', error);
+      throw error;
     }
   };
 
@@ -210,6 +216,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
       setOffers((prev) => prev.filter(o => o.demandId !== id));
     } catch (error) {
       console.error('Error deleting demand:', error);
+      throw error;
     }
   };
 
@@ -237,6 +244,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
       ));
     } catch (error) {
       console.error('Error adding offer:', error);
+      throw error;
     }
   };
 
@@ -268,6 +276,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     } catch (error) {
       console.error('Error accepting offer:', error);
+      throw error;
     }
   };
 
@@ -277,6 +286,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
       setOffers((prev) => prev.map(o => o.id === offerId ? { ...o, status: 'rejected' } : o));
     } catch (error) {
       console.error('Error rejecting offer:', error);
+      throw error;
     }
   };
 
