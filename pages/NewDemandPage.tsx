@@ -5,7 +5,6 @@ import { DemandItem, Demand, DemandStatus } from '../types';
 import { useDemands } from '../context/DemandsContext';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, BR_STATES } from '../mockData';
-import { GoogleGenAI } from "@google/genai";
 
 const UNIT_OPTIONS = [
   { value: 'un', label: 'Unidade (un)' },
@@ -41,7 +40,6 @@ const NewDemandPage: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [items, setItems] = useState<DemandItem[]>([
@@ -92,34 +90,6 @@ const NewDemandPage: React.FC = () => {
     }
   }, [selectedState]);
 
-  const handleAIEnhance = async () => {
-    if (!title || !category) {
-      alert("Por favor, preencha o título e a categoria para que a IA possa ajudar.");
-      return;
-    }
-    setIsGeneratingAI(true);
-    try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        alert("Chave de API do Gemini não configurada.");
-        return;
-      }
-      const client = new (GoogleGenAI as any)({ apiKey });
-      const result = await client.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: `Melhore esta descrição de demanda comercial B2B de forma profissional e detalhada: Título: ${title}, Categoria: ${category}. Descrição atual: ${description || 'Sem descrição específica'}. Foque em clareza para fornecedores.`
-      });
-
-      if (result.text) {
-        setDescription(result.text.trim());
-      }
-    } catch (err) {
-      console.error('AI Error:', err);
-      alert("Erro ao gerar descrição com IA. Verifique sua chave de API e conexão.");
-    } finally {
-      setIsGeneratingAI(false);
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -268,10 +238,6 @@ const NewDemandPage: React.FC = () => {
               <div className="md:col-span-2 space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-sm font-black text-slate-700 uppercase tracking-widest">Descrição Detalhada</span>
-                  <button type="button" onClick={handleAIEnhance} disabled={isGeneratingAI} className="flex items-center gap-2 text-xs font-black text-primary hover:text-blue-700 transition-colors bg-blue-50 px-4 py-2 rounded-full border border-blue-100 disabled:opacity-50">
-                    <span className="material-symbols-outlined text-[18px] animate-pulse">auto_awesome</span>
-                    {isGeneratingAI ? 'MELHORANDO COM IA...' : 'MELHORAR COM IA'}
-                  </button>
                 </div>
                 <textarea required value={description} onChange={(e) => setDescription(e.target.value)} className="form-textarea w-full rounded-2xl border-slate-200 bg-slate-50 p-5 focus:bg-white focus:ring-primary transition-all min-h-[160px] text-slate-600 leading-relaxed" placeholder="Explique detalhadamente o que você precisa." />
               </div>
