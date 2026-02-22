@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
-import { Demand, DemandFilters, Offer, DemandStatus, DemandItem, Order } from '../types';
+import { Demand, DemandFilters, Offer, DemandStatus, DemandItem, Order, AppNotification } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -10,9 +10,11 @@ interface DemandsContextType {
   filteredDemands: Demand[];
   offers: Offer[];
   orders: Order[];
+  notifications: AppNotification[];
   filters: DemandFilters;
   isLoading: boolean;
   setFilters: React.Dispatch<React.SetStateAction<DemandFilters>>;
+  markNotificationsAsRead: () => void;
   addDemand: (demand: Demand) => Promise<void>;
   updateDemand: (demand: Demand) => Promise<void>;
   deleteDemand: (id: string) => Promise<void>;
@@ -68,7 +70,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           budget: d.estimated_price ? `R$ ${d.estimated_price.toLocaleString('pt-BR')}` : 'Sob consulta',
           status: d.status === 'aberto' ? DemandStatus.ABERTO :
             d.status === 'analise' ? DemandStatus.EM_ANALISE : DemandStatus.FECHADO,
-          isPremium: false, // Map this if you add a column to demands
+          isPremium: false,
           ownerId: d.user_id,
           offersCount: 0, // We could count offers here or in a separate query
           tags: d.category ? [d.category] : [],
@@ -454,6 +456,56 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
     setFilters(initialFilters);
   };
 
+  const [lastReadTimestamp, setLastReadTimestamp] = useState<number>(() => {
+    return Number(localStorage.getItem('last_read_notifications') || 0);
+  });
+
+  const markNotificationsAsRead = () => {
+    const now = Date.now();
+    setLastReadTimestamp(now);
+    localStorage.setItem('last_read_notifications', now.toString());
+  };
+
+  const notifications = useMemo(() => {
+    if (!user) return [];
+    const list: AppNotification[] = [];
+
+    // 1. New offers on my demands
+    const userDemands = demands.filter(d => d.ownerId === user.id);
+    const userDemandIds = userDemands.map(d => d.id);
+
+    offers.forEach(o => {
+      if (userDemandIds.includes(o.demandId) && o.sellerId !== user.id) {
+        list.push({
+          id: `offer-${o.id}`,
+          type: 'new_offer',
+          title: 'Nova Oferta Recebida',
+          message: `Você recebeu uma nova oferta na demanda: ${userDemands.find(d => d.id === o.demandId)?.title}`,
+          link: `/demanda/${o.demandId}`,
+          createdAt: o.createdAt,
+          read: new Date(o.createdAt).getTime() <= lastReadTimestamp
+        });
+      }
+    });
+
+    // 2. Orders for my offers (I'm the seller)
+    orders.forEach(ord => {
+      if (ord.sellerId === user.id) {
+        list.push({
+          id: `order-${ord.id}`,
+          type: 'order_accepted',
+          title: 'Venda Confirmada!',
+          message: `O comprador aceitou sua oferta! Pedido #${ord.orderNumber?.toString().padStart(4, '0')}`,
+          link: `/demanda/${ord.demandId}/pedido`,
+          createdAt: ord.createdAt,
+          read: new Date(ord.createdAt).getTime() <= lastReadTimestamp
+        });
+      }
+    });
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [demands, offers, orders, user, lastReadTimestamp]);
+
   const filteredDemands = useMemo(() => {
     return demands.filter((demand) => {
       if (filters.search && !demand.title.toLowerCase().includes(filters.search.toLowerCase()) && !demand.id.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -477,7 +529,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [demands, filters]);
 
   return (
-    <DemandsContext.Provider value={{ demands, filteredDemands, offers, orders, filters, isLoading, setFilters, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
+    <DemandsContext.Provider value={{ demands, filteredDemands, offers, orders, notifications, filters, isLoading, setFilters, markNotificationsAsRead, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
       {children}
     </DemandsContext.Provider>
   );

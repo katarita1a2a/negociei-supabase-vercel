@@ -154,14 +154,6 @@ const DashboardPage: React.FC = () => {
 
           {/* Quick Actions / Recent Feedback */}
           <div className="flex flex-col gap-6">
-            <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl shadow-slate-200 overflow-hidden relative border border-slate-800">
-              <div className="relative z-10">
-                <h3 className="font-bold text-lg mb-2">Seja Premium</h3>
-                <p className="text-slate-400 text-sm mb-6 leading-relaxed">Tenha acesso a demandas exclusivas e destaque suas ofertas para mais compradores.</p>
-                <Link to="/premium" className="w-full flex items-center justify-center bg-primary-green hover:bg-green-500 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-green-500/10">Ver Planos Pro</Link>
-              </div>
-              <span className="material-symbols-outlined absolute -bottom-6 -right-6 text-9xl text-white/5 pointer-events-none rotate-12">rocket_launch</span>
-            </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Próximos Passos</h3>

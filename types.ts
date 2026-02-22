@@ -107,3 +107,13 @@ export interface DemandFilters {
   categories: string[];
   status: string;
 }
+
+export interface AppNotification {
+  id: string;
+  type: 'new_offer' | 'order_accepted';
+  title: string;
+  message: string;
+  link: string;
+  createdAt: string;
+  read: boolean;
+}

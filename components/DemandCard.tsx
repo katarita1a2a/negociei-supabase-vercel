@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Demand } from '../types';
 import StatusBadge from './StatusBadge';
-import PremiumBadge from './PremiumBadge';
+// import PremiumBadge from './PremiumBadge';
 import { useDemands } from '../context/DemandsContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -18,16 +18,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
   const hasImage = demand.images && demand.images.length > 0;
 
   return (
-    <article className={`
-      group flex flex-col bg-white rounded-[1.5rem] border-2 transition-all duration-500 overflow-hidden relative
-      ${demand.isPremium
-        ? 'border-amber-400 shadow-xl shadow-amber-500/10 hover:border-amber-500'
-        : 'border-slate-100 shadow-soft hover:shadow-elegant hover:border-primary/40'}
-    `}>
-      {/* Indicador Lateral Premium */}
-      {demand.isPremium && (
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-400 to-orange-500 z-20"></div>
-      )}
+    <article className="group flex flex-col bg-white rounded-[1.5rem] border-2 border-slate-100 shadow-soft hover:shadow-elegant hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
 
       <div className="p-5 flex flex-col h-full relative z-10">
         {/* Topo: Tags e Status */}
@@ -39,7 +30,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
               }`}>
               {demand.category}
             </span>
-            {demand.isPremium && <PremiumBadge />}
+            {/* <PremiumBadge /> */}
           </div>
           <div className="flex items-start gap-2">
             <button
@@ -108,7 +99,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex flex-col">
               <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Orçamento Estimado</span>
-              <span className={`text-xl font-black tracking-tighter ${demand.isPremium ? 'text-amber-600' : 'text-slate-900'}`}>
+              <span className="text-xl font-black tracking-tighter text-slate-900">
                 {demand.budget}
               </span>
             </div>
@@ -130,12 +121,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
           ) : (
             <Link
               to={`/demanda/${demand.id}`}
-              className={`
-                w-full h-11 flex items-center justify-center gap-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-lg
-                ${demand.isPremium
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20'
-                  : 'bg-primary text-white hover:bg-primary-dark shadow-primary/20'}
-              `}
+              className="w-full h-11 flex items-center justify-center gap-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-lg bg-primary text-white hover:bg-primary-dark shadow-primary/20"
             >
               Quero Negociar
               <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">handshake</span>
@@ -145,8 +131,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
       </div>
 
       {/* Barra de Progresso Estética Inferior */}
-      <div className={`absolute bottom-0 left-0 h-1 transition-all duration-500 rounded-full ${demand.isPremium ? 'w-full bg-orange-400 opacity-50' : 'w-0 group-hover:w-full bg-primary opacity-30'
-        }`}></div>
+      <div className="absolute bottom-0 left-0 h-1 transition-all duration-500 rounded-full w-0 group-hover:w-full bg-primary opacity-30"></div>
     </article>
   );
 };

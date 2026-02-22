@@ -18,12 +18,7 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
   const hasImage = demand.images && demand.images.length > 0;
 
   return (
-    <article className={`
-      group flex flex-col md:flex-row items-center bg-white rounded-2xl border-2 transition-all duration-300 overflow-hidden relative p-4 gap-6
-      ${demand.isPremium
-        ? 'border-amber-400 shadow-lg shadow-amber-500/5 hover:border-amber-500'
-        : 'border-slate-100 hover:border-primary/40 shadow-sm'}
-    `}>
+    <article className="group flex flex-col md:flex-row items-center bg-white rounded-2xl border-2 border-slate-100 hover:border-primary/40 shadow-sm transition-all duration-300 overflow-hidden relative p-4 gap-6">
       {/* Imagem (Esquerda) */}
       <div className="relative flex-shrink-0">
         <div className="size-20 md:size-24 rounded-xl overflow-hidden border border-slate-100 shadow-inner bg-slate-50">
@@ -35,11 +30,6 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
             </div>
           )}
         </div>
-        {demand.isPremium && (
-          <div className="absolute -top-2 -left-2 scale-75 origin-top-left">
-            <PremiumBadge />
-          </div>
-        )}
       </div>
 
       {/* Info Principal (Centro) */}
@@ -86,7 +76,7 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
       <div className="flex flex-col items-center md:items-end gap-3 min-w-[180px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
         <div className="text-center md:text-right">
           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Orçamento Estimado</p>
-          <p className={`text-xl font-black tracking-tighter ${demand.isPremium ? 'text-amber-600' : 'text-slate-900'}`}>
+          <p className="text-xl font-black tracking-tighter text-slate-900">
             {demand.budget}
           </p>
         </div>
@@ -99,12 +89,7 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
         ) : (
           <Link
             to={`/demanda/${demand.id}`}
-            className={`
-              w-full h-10 px-6 flex items-center justify-center gap-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-md
-              ${demand.isPremium
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-amber-500/10'
-                : 'bg-primary text-white shadow-primary/10'}
-            `}
+            className="w-full h-10 px-6 flex items-center justify-center gap-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-md bg-primary text-white shadow-primary/10"
           >
             NEGOCIAR
             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>

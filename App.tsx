@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
         <Route path="/minhas-demandas" element={session ? <MyDemandsPage /> : <Navigate to="/login" replace />} />
         <Route path="/ofertas" element={session ? <MyOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/perfil" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
-        <Route path="/premium" element={session ? <PremiumPage /> : <Navigate to="/login" replace />} />
+        {/* <Route path="/premium" element={session ? <PremiumPage /> : <Navigate to="/login" replace />} /> */}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

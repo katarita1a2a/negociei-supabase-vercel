@@ -167,10 +167,12 @@ const ProfilePage: React.FC = () => {
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">{profile?.name || user?.user_metadata?.full_name || 'Usuário'}</h2>
               <p className="text-slate-500 font-medium">Membro desde {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '---'}</p>
               <div className="flex justify-center md:justify-start mt-3">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 ${profile?.is_premium ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-primary border-blue-100'} text-[10px] font-black rounded-lg uppercase tracking-widest border shadow-sm`}>
-                  <span className="material-symbols-outlined text-[16px] fill-1">{profile?.is_premium ? 'workspace_premium' : 'verified_user'}</span>
-                  {profile?.is_premium ? 'CONTA PREMIUM' : 'CONTA EM VERIFICAÇÃO'}
-                </span>
+                <div className="flex justify-center md:justify-start mt-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-primary border-blue-100 text-[10px] font-black rounded-lg uppercase tracking-widest border shadow-sm">
+                    <span className="material-symbols-outlined text-[16px] fill-1">verified_user</span>
+                    CONTA EM VERIFICAÇÃO
+                  </span>
+                </div>
               </div>
             </div>
             <button
@@ -262,37 +264,6 @@ const ProfilePage: React.FC = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm space-y-5">
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Plano Atual</p>
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">{profile?.is_premium ? 'Premium Pro' : 'Plano Gratuito'}</h3>
-                <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded">Ativo</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${profile?.is_premium ? 'bg-emerald-500' : 'bg-primary'}`}
-                  style={{ width: profile?.is_premium ? '100%' : '60%' }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-xs text-slate-500 font-medium">
-                {profile?.is_premium ? (
-                  <span>Negociações Ilimitadas</span>
-                ) : (
-                  <>
-                    <span>{stats.demandsCreated} de 5 Negociações</span>
-                    <span className="font-bold">{Math.min(100, (stats.demandsCreated / 5) * 100)}% usado</span>
-                  </>
-                )}
-              </div>
-              {!profile?.is_premium && (
-                <Link
-                  to="/premium"
-                  className="w-full h-12 bg-primary-green text-slate-900 font-black rounded-xl hover:bg-green-500 transition-all flex items-center justify-center shadow-lg shadow-green-100"
-                >
-                  Fazer Upgrade para Pro
-                </Link>
-              )}
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 text-center flex flex-col items-center shadow-sm">

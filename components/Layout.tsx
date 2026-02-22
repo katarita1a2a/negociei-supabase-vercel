@@ -13,8 +13,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { filters, setFilters, resetFilters } = useDemands();
+  const { filters, setFilters, resetFilters, notifications, markNotificationsAsRead } = useDemands();
   const { user, signOut } = useAuth();
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
@@ -106,10 +108,85 @@ const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
               >
                 <span className="material-symbols-outlined text-[20px]">logout</span>
               </button>
-              <button className="relative flex items-center justify-center size-10 rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">notifications</span>
-                <span className="absolute top-2.5 right-2.5 size-1.5 bg-red-500 rounded-full border border-white"></span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsNotificationsOpen(!isNotificationsOpen);
+                    if (!isNotificationsOpen) markNotificationsAsRead();
+                  }}
+                  className={`relative flex items-center justify-center size-10 rounded-full transition-colors ${isNotificationsOpen ? 'bg-primary text-white shadow-lg' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2.5 right-2.5 size-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </button>
+
+                {isNotificationsOpen && (
+                  <div className="absolute top-full right-0 mt-3 w-80 bg-white rounded-2xl border border-slate-100 shadow-2xl z-[60] overflow-hidden flex flex-col max-h-[480px]">
+                    <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Notificações</h3>
+                      <span className="text-[10px] font-bold text-slate-400">{notifications.length} total</span>
+                    </div>
+
+                    <div className="overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-slate-50">
+                          {notifications.map((notif) => (
+                            <Link
+                              key={notif.id}
+                              to={notif.link}
+                              onClick={() => setIsNotificationsOpen(false)}
+                              className="block p-4 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex gap-3">
+                                <div className={`size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${notif.type === 'new_offer' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    {notif.type === 'new_offer' ? 'local_offer' : 'shopping_cart_checkout'}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs font-black text-slate-900 leading-tight">{notif.title}</p>
+                                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium line-clamp-2">{notif.message}</p>
+                                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                                    {new Date(notif.createdAt).toLocaleDateString()} • {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-10 text-center space-y-3">
+                          <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-300">
+                            <span className="material-symbols-outlined text-3xl">notifications_off</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-400">Nenhuma notificação por aqui.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                      <div className="p-3 bg-slate-50/80 border-t border-slate-100">
+                        <button
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="w-full py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Backdrop invisível para fechar ao clicar fora */}
+                {isNotificationsOpen && (
+                  <div
+                    className="fixed inset-0 z-[-1]"
+                    onClick={() => setIsNotificationsOpen(false)}
+                  />
+                )}
+              </div>
               <Link to="/perfil" className="size-10 rounded-full border border-slate-200 cursor-pointer overflow-hidden shadow-soft flex items-center justify-center bg-slate-100">
                 {user?.user_metadata?.avatar_url ? (
                   <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
