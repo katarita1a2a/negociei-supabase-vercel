@@ -9,7 +9,7 @@ interface OfferCardProps {
   isBest?: boolean;
   referenceBudget?: number;
   selectionMap?: Record<string, string>;
-  onToggleItem?: (description: string, offerId: string) => void;
+  onToggleItem?: (itemId: string, offerId: string) => void;
 }
 
 const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, selectionMap = {}, onToggleItem }) => {
@@ -21,7 +21,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
   // Filtra itens desta oferta que estão selecionados no mapa global
   const selectedItemIds = useMemo(() => {
     return offer.items
-      ?.filter(item => selectionMap[item.description] === offer.id)
+      ?.filter(item => selectionMap[item.id] === offer.id)
       .map(item => item.id) || [];
   }, [offer.items, selectionMap, offer.id]);
 
@@ -59,11 +59,11 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
     }
   };
 
-  const purchasedItems = useMemo(() => {
+  const purchasedItemIds = useMemo(() => {
     const demandOrders = orders.filter(o => o.demandId === offer.demandId);
-    const itemNames = new Set<string>();
-    demandOrders.forEach(o => o.items?.forEach(i => itemNames.add(i.description)));
-    return itemNames;
+    const itemIds = new Set<string>();
+    demandOrders.forEach(o => o.items?.forEach(i => itemIds.add(i.id)));
+    return itemIds;
   }, [orders, offer.demandId]);
 
   const selectedTotal = useMemo(() => {
@@ -187,8 +187,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
 
           <div className="flex flex-col gap-3">
             {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => {
-              const isAlreadyOrdered = purchasedItems.has(item.description);
-              const selectedByOfferId = selectionMap[item.description];
+              const isAlreadyOrdered = purchasedItemIds.has(item.id);
+              const selectedByOfferId = selectionMap[item.id];
               const isSelected = selectedByOfferId === offer.id;
               const isSelectedByOther = selectedByOfferId && selectedByOfferId !== offer.id;
 
@@ -197,7 +197,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                   key={item.id}
                   onClick={() => {
                     if (offer.status !== 'pending' || isAlreadyOrdered) return;
-                    onToggleItem?.(item.description, offer.id);
+                    onToggleItem?.(item.id, offer.id);
                   }}
                   className={`
                   flex items-center justify-between p-3 rounded-xl border transition-all
@@ -310,7 +310,6 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
         )}
       </div>
     </div>
-    </div >
   );
 };
 

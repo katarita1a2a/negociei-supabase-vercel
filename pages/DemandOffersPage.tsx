@@ -13,16 +13,16 @@ const DemandOffersPage: React.FC = () => {
   const { demands, offers, orders } = useDemands();
   const [sortBy, setSortBy] = useState<'menor' | 'maior' | 'recent'>('menor');
 
-  // Mapeia Descriçao do Item -> ID da Oferta (quem está fornecendo esse item no carrinho global)
+  // Mapeia ID do Item -> ID da Oferta (quem está fornecendo esse item no carrinho global)
   const [selectionMap, setSelectionMap] = useState<Record<string, string>>({});
 
-  const toggleItemSelection = (itemDescription: string, offerId: string) => {
+  const toggleItemSelection = (itemId: string, offerId: string) => {
     setSelectionMap(prev => {
       const newMap = { ...prev };
-      if (newMap[itemDescription] === offerId) {
-        delete newMap[itemDescription];
+      if (newMap[itemId] === offerId) {
+        delete newMap[itemId];
       } else {
-        newMap[itemDescription] = offerId;
+        newMap[itemId] = offerId;
       }
       return newMap;
     });
@@ -93,9 +93,9 @@ const DemandOffersPage: React.FC = () => {
 
   const globalTotal = useMemo(() => {
     let total = 0;
-    Object.entries(selectionMap).forEach(([desc, offerId]) => {
+    Object.entries(selectionMap).forEach(([itemId, offerId]) => {
       const offer = offers.find(o => o.id === offerId);
-      const item = offer?.items?.find(i => i.description === desc);
+      const item = offer?.items?.find(i => i.id === itemId);
       if (item) total += item.totalPrice;
     });
     return total;
