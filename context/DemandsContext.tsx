@@ -116,6 +116,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           status: o.status === 'aceita' ? 'accepted' :
             o.status === 'rejeitada' ? 'rejected' : 'pending',
           createdAt: o.created_at,
+          pdfUrl: o.pdf_url,
           items: (o.items || []).map((item: any) => ({
             id: item.id,
             description: item.name,
@@ -287,6 +288,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           payment_terms: offer.paymentTerms,
           valid_until: offer.validUntil || null,
           message: offer.message,
+          pdf_url: offer.pdfUrl,
           status: 'enviada'
         })
         .select()

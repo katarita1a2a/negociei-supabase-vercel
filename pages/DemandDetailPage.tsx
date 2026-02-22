@@ -26,6 +26,9 @@ const DemandDetailPage: React.FC = () => {
   const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState<string | null>(null);
+  const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (demand?.items) {
@@ -76,7 +79,10 @@ const DemandDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await addOffer(newOffer);
+      await addOffer({
+        ...newOffer,
+        pdfUrl: pdfBase64 || undefined
+      });
       navigate('/ofertas');
     } catch (err) {
       console.error('Error sending offer:', err);
@@ -96,7 +102,17 @@ const DemandDetailPage: React.FC = () => {
             <span className="material-symbols-outlined text-lg group-hover:-translate-x-1 transition-transform">arrow_back</span>
             Feed de Demandas
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const text = `Confira esta demanda no Negociei.app: ${demand.title}\n\n${window.location.href}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">share</span>
+              Compartilhar
+            </button>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">ID: #{demand.id}</span>
             <StatusBadge status={demand.status} />
           </div>
@@ -402,14 +418,46 @@ const DemandDetailPage: React.FC = () => {
                       <option value="Boleto Bancário">Boleto Bancário</option>
                     </select>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Proposta Válida até</label>
-                    <input
-                      type="date"
-                      value={validUntil}
-                      onChange={(e) => setValidUntil(e.target.value)}
-                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Anexo PDF (Opcional)</label>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        ref={pdfInputRef}
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert("O arquivo PDF deve ter no máximo 5MB.");
+                              return;
+                            }
+                            setPdfName(file.name);
+                            const reader = new FileReader();
+                            reader.onloadend = () => setPdfBase64(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => pdfInputRef.current?.click()}
+                        className={`w-full h-12 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${pdfName ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400 hover:border-primary hover:text-primary'}`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">{pdfName ? 'check_circle' : 'picture_as_pdf'}</span>
+                        <span className="text-xs font-bold truncate max-w-[120px]">{pdfName || 'Anexar PDF da Proposta'}</span>
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Proposta Válida até</label>
+                      <input
+                        type="date"
+                        value={validUntil}
+                        onChange={(e) => setValidUntil(e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 

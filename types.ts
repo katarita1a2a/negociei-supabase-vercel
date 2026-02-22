@@ -84,6 +84,7 @@ export interface Offer {
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string; // ISO Format
   items?: DemandItem[];
+  pdfUrl?: string;
 }
 
 export interface Order {
