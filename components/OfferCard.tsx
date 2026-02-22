@@ -18,6 +18,11 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
   const [isExpanded, setIsExpanded] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
 
+  // Verifica se esta oferta específica já possui algum item em algum pedido
+  const hasExistingOrder = useMemo(() => {
+    return orders.some(ord => ord.offerId === offer.id);
+  }, [orders, offer.id]);
+
   // Filtra itens desta oferta que estão selecionados no mapa global
   const selectedItemIds = useMemo(() => {
     return offer.items
@@ -49,6 +54,10 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
   };
 
   const handleReject = async () => {
+    if (hasExistingOrder) {
+      alert("Não é possível rejeitar uma proposta que já possui itens comprados.");
+      return;
+    }
     if (window.confirm('Deseja realmente rejeitar esta proposta?')) {
       try {
         await rejectOffer(offer.id);
@@ -59,11 +68,20 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
     }
   };
 
+  // Conjunto de IDs de itens já comprados (usado para desabilitar itens nesta oferta)
   const purchasedItemIds = useMemo(() => {
     const demandOrders = orders.filter(o => o.demandId === offer.demandId);
     const itemIds = new Set<string>();
     demandOrders.forEach(o => o.items?.forEach(i => itemIds.add(i.id)));
     return itemIds;
+  }, [orders, offer.demandId]);
+
+  // Conjunto de Descrições de itens já comprados em QUALQUER fornecedor
+  const purchasedItemDescriptions = useMemo(() => {
+    const demandOrders = orders.filter(o => o.demandId === offer.demandId);
+    const itemNames = new Set<string>();
+    demandOrders.forEach(o => o.items?.forEach(i => itemNames.add(i.description.trim().toLowerCase())));
+    return itemNames;
   }, [orders, offer.demandId]);
 
   const selectedTotal = useMemo(() => {
@@ -187,7 +205,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
 
           <div className="flex flex-col gap-3">
             {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => {
-              const isAlreadyOrdered = purchasedItemIds.has(item.id);
+              const isAlreadyOrdered = purchasedItemIds.has(item.id) || purchasedItemDescriptions.has(item.description.trim().toLowerCase());
               const selectedByOfferId = selectionMap[item.id];
               const isSelected = selectedByOfferId === offer.id;
               const isSelectedByOther = selectedByOfferId && selectedByOfferId !== offer.id;
@@ -247,6 +265,15 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                       </span>
                     </div>
                   )}
+
+                  {isAlreadyOrdered && !selectedItemIds.includes(item.id) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100/60 backdrop-blur-[1px] rounded-xl pointer-events-none">
+                      <span className="bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                        Item Comprado
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -281,7 +308,26 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
               </Link>
             </div>
           </div>
-        ) : offer.status === 'pending' ? (
+        ) : (offer.status === 'accepted' || hasExistingOrder) ? (
+          <div className="flex flex-col gap-3">
+            <button
+              disabled={selectedItemIds.length === 0}
+              onClick={handleAccept}
+              className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Comprar mais itens
+            </button>
+            <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
+              <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
+            </Link>
+          </div>
+        ) : offer.status === 'rejected' ? (
+          <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
+            <span className="material-symbols-outlined text-[18px]">cancel</span>
+            Proposta Recusada
+          </div>
+        ) : (
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={handleReject}
@@ -297,15 +343,6 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
               <span className="material-symbols-outlined text-[18px]">check</span>
               {selectedItemIds.length === offer.items?.length ? 'Aceitar Proposta' : `Aceitar ${selectedItemIds.length} itens`}
             </button>
-          </div>
-        ) : offer.status === 'accepted' ? (
-          <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
-            <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
-          </Link>
-        ) : (
-          <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
-            <span className="material-symbols-outlined text-[18px]">cancel</span>
-            Proposta Recusada
           </div>
         )}
       </div>

@@ -147,7 +147,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           createdAt: o.created_at,
           orderNumber: o.order_number,
           items: (o.order_items || []).map((oi: any) => ({
-            id: oi.id,
+            id: oi.offer_item_id, // Map correctly to the offer item ID for cross-reference
             description: oi.description,
             unit: oi.unit,
             quantity: oi.quantity,
@@ -385,9 +385,17 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const isFullyAccepted = alreadyOrderedItemDescriptions.size >= allItemsCount;
 
+      // Mark THIS offer as accepted as soon as we have an order
+      await supabase.from('offers').update({ status: 'aceita' }).eq('id', offerId);
+
       if (isFullyAccepted) {
-        await supabase.from('offers').update({ status: 'aceita' }).eq('id', offerId);
-        await supabase.from('offers').update({ status: 'rejeitada' }).eq('demand_id', targetDemandId).neq('id', offerId).eq('status', 'enviada');
+        // Only reject OTHER offers if all items of the demand are now fulfilled
+        await supabase.from('offers')
+          .update({ status: 'rejeitada' })
+          .eq('demand_id', targetDemandId)
+          .neq('id', offerId)
+          .eq('status', 'enviada');
+
         await supabase.from('demands').update({ status: 'fechado' }).eq('id', targetDemandId);
       }
 
@@ -407,12 +415,16 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Update local state
       setOrders(prev => [newOrder, ...prev]);
 
+      // Update local state for THIS offer
+      setOffers(prevOffers => prevOffers.map(o => {
+        if (o.id === offerId) return { ...o, status: 'accepted' };
+        if (isFullyAccepted && o.demandId === targetDemandId && o.status === 'pending') {
+          return { ...o, status: 'rejected' };
+        }
+        return o;
+      }));
+
       if (isFullyAccepted) {
-        setOffers(prevOffers => prevOffers.map(o => {
-          if (o.id === offerId) return { ...o, status: 'accepted' };
-          if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
-          return o;
-        }));
         setDemands(prevDemands => prevDemands.map(d => {
           if (d.id === targetDemandId) return { ...d, status: DemandStatus.FECHADO };
           return d;
