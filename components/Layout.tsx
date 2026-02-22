@@ -13,10 +13,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { filters, setFilters, resetFilters, notifications, markNotificationsAsRead } = useDemands();
+  const { filters, setFilters, resetFilters, notifications = [], markNotificationsAsRead } = useDemands();
   const { user, signOut } = useAuth();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
 
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);

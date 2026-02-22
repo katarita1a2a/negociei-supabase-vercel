@@ -42,6 +42,7 @@ const AppContent: React.FC = () => {
         <Route path="/demanda/:id" element={session ? <DemandDetailPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/:id/ofertas" element={session ? <DemandOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/:id/pedido" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
+        <Route path="/pedido/:orderId" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
         <Route path="/minhas-demandas" element={session ? <MyDemandsPage /> : <Navigate to="/login" replace />} />
         <Route path="/ofertas" element={session ? <MyOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/perfil" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />

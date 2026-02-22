@@ -457,13 +457,22 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const [lastReadTimestamp, setLastReadTimestamp] = useState<number>(() => {
-    return Number(localStorage.getItem('last_read_notifications') || 0);
+    try {
+      return Number(localStorage.getItem('last_read_notifications') || 0);
+    } catch (e) {
+      console.warn('Failed to access localStorage:', e);
+      return 0;
+    }
   });
 
   const markNotificationsAsRead = () => {
     const now = Date.now();
     setLastReadTimestamp(now);
-    localStorage.setItem('last_read_notifications', now.toString());
+    try {
+      localStorage.setItem('last_read_notifications', now.toString());
+    } catch (e) {
+      console.warn('Failed to save to localStorage:', e);
+    }
   };
 
   const notifications = useMemo(() => {
@@ -496,7 +505,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           type: 'order_accepted',
           title: 'Venda Confirmada!',
           message: `O comprador aceitou sua oferta! Pedido #${ord.orderNumber?.toString().padStart(4, '0')}`,
-          link: `/demanda/${ord.demandId}/pedido`,
+          link: `/pedido/${ord.id}`,
           createdAt: ord.createdAt,
           read: new Date(ord.createdAt).getTime() <= lastReadTimestamp
         });

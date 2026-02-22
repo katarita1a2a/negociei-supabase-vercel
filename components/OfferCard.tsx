@@ -300,7 +300,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                 Continuar
               </button>
               <Link
-                to={`/demanda/${offer.demandId}/pedido?order=${successOrderId}`}
+                to={`/pedido/${successOrderId}`}
                 className="h-10 rounded-xl bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
               >
                 Ver Pedido
@@ -329,7 +329,13 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
               <span className="material-symbols-outlined text-[18px]">add</span>
               Comprar mais itens
             </button>
-            <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
+            <Link
+              to={(() => {
+                const ord = orders.find(o => o.offerId === offer.id);
+                return ord ? `/pedido/${ord.id}` : `/demanda/${offer.demandId}/pedido`;
+              })()}
+              className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all"
+            >
               <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
             </Link>
           </div>

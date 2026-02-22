@@ -8,10 +8,21 @@ import { useAuth } from '../context/AuthContext';
 
 const OrderPage: React.FC = () => {
   const { user } = useAuth();
-  const { id } = useParams();
+  const { id, orderId } = useParams();
   const { demands, offers, orders } = useDemands();
 
   const { demand, acceptedOffer, orderRecord, specificOffer } = useMemo(() => {
+    // Se temos orderId direto na URL
+    if (orderId) {
+      const ord = orders.find(item => item.id === orderId);
+      if (!ord) return { demand: null, acceptedOffer: null, orderRecord: null, specificOffer: null };
+
+      const d = demands.find(item => item.id === ord.demandId);
+      const off = offers.find(item => item.id === ord.offerId);
+      return { demand: d, acceptedOffer: off, orderRecord: ord, specificOffer: off };
+    }
+
+    // Fallback para rota antiga baseada no id da demanda
     const d = demands.find(item => item.id === id);
     const ord = orders.find(item => item.demandId === id && item.status === 'ativo');
     const o = offers.find(item => item.demandId === id && item.status === 'accepted');
@@ -20,7 +31,7 @@ const OrderPage: React.FC = () => {
     const specOff = ord ? offers.find(off => off.id === ord.offerId) : null;
 
     return { demand: d, acceptedOffer: o, orderRecord: ord, specificOffer: specOff };
-  }, [demands, offers, orders, id]);
+  }, [demands, offers, orders, id, orderId]);
 
   const handlePrint = () => window.print();
 
@@ -41,9 +52,9 @@ const OrderPage: React.FC = () => {
   // Use real orderNumber if available, fallback to ORD-hash
   const displayOrderNumber = orderRecord?.orderNumber
     ? orderRecord.orderNumber.toString().padStart(4, '0')
-    : currentOffer.id.substring(currentOffer.id.length - 6);
+    : (id || orderId || '0000').substring(0, 6);
 
-  const orderId = `ORD-${displayOrderNumber}`;
+  const displayFullOrderId = `ORD-${displayOrderNumber}`;
 
   const itemsSubtotal = useMemo(() => {
     const items = orderRecord?.items || currentOffer.items || [];
@@ -56,7 +67,7 @@ const OrderPage: React.FC = () => {
     <Layout showSidebar={false}>
       <div className="max-w-[1000px] mx-auto flex flex-col gap-8 pb-20">
         <div className="flex justify-between items-center print:hidden">
-          <h1 className="text-3xl font-black text-slate-900">Pedido #{orderId}</h1>
+          <h1 className="text-3xl font-black text-slate-900">Pedido #{displayFullOrderId}</h1>
           <button onClick={handlePrint} className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all">
             <span className="material-symbols-outlined">print</span> IMPRIMIR PEDIDO
           </button>
@@ -68,7 +79,7 @@ const OrderPage: React.FC = () => {
               <Logo size="md" />
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Referência do Pedido</p>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{orderId}</h2>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{displayFullOrderId}</h2>
               </div>
             </div>
             <div className="text-right space-y-2">
