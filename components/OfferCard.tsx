@@ -68,6 +68,44 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
     }
   };
 
+  const handleViewPdf = () => {
+    if (!offer.pdfUrl) return;
+
+    try {
+      // Se for um link direto (http/https), abre direto
+      if (offer.pdfUrl.startsWith('http')) {
+        window.open(offer.pdfUrl, '_blank');
+        return;
+      }
+
+      // Se for base64 (data:application/pdf;base64,...), precisamos converter para Blob
+      // para evitar bloqueios de segurança do navegador em links base64 gigantes
+      const base64Data = offer.pdfUrl.split(',')[1];
+      if (!base64Data) {
+        window.open(offer.pdfUrl, '_blank');
+        return;
+      }
+
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      window.open(blobUrl, '_blank');
+
+      // Limpeza opcional após um tempo
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) {
+      console.error('Error opening PDF:', err);
+      // Fallback
+      window.open(offer.pdfUrl, '_blank');
+    }
+  };
+
   // Conjunto de IDs de itens já comprados (usado para desabilitar itens nesta oferta)
   const purchasedItemIds = useMemo(() => {
     const demandOrders = orders.filter(o => o.demandId === offer.demandId);
@@ -311,15 +349,13 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
         ) : (offer.status === 'accepted' || hasExistingOrder) ? (
           <div className="flex flex-col gap-3">
             {offer.pdfUrl && (
-              <a
-                href={offer.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={handleViewPdf}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 transition-all bg-white mb-2"
               >
                 <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
                 Ver Anexo da Proposta (PDF)
-              </a>
+              </button>
             )}
             <button
               disabled={selectedItemIds.length === 0}
