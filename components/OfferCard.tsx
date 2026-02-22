@@ -8,14 +8,22 @@ interface OfferCardProps {
   offer: Offer;
   isBest?: boolean;
   referenceBudget?: number;
+  selectionMap?: Record<string, string>;
+  onToggleItem?: (description: string, offerId: string) => void;
 }
 
-const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget }) => {
+const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, selectionMap = {}, onToggleItem }) => {
   const { acceptOffer, rejectOffer, orders } = useDemands();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>(offer.items?.map(i => i.id) || []);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+
+  // Filtra itens desta oferta que estão selecionados no mapa global
+  const selectedItemIds = useMemo(() => {
+    return offer.items
+      ?.filter(item => selectionMap[item.description] === offer.id)
+      .map(item => item.id) || [];
+  }, [offer.items, selectionMap, offer.id]);
 
   const handleAccept = async () => {
     if (selectedItemIds.length === 0) {
@@ -57,12 +65,6 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
     demandOrders.forEach(o => o.items?.forEach(i => itemNames.add(i.description)));
     return itemNames;
   }, [orders, offer.demandId]);
-
-  const toggleItem = (id: string) => {
-    setSelectedItemIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
 
   const selectedTotal = useMemo(() => {
     return offer.items
@@ -183,116 +185,132 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-3">
             {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => {
               const isAlreadyOrdered = purchasedItems.has(item.description);
-              const isSelected = selectedItemIds.includes(item.id);
+              const selectedByOfferId = selectionMap[item.description];
+              const isSelected = selectedByOfferId === offer.id;
+              const isSelectedByOther = selectedByOfferId && selectedByOfferId !== offer.id;
 
               return (
                 <div
                   key={item.id}
-                  onClick={() => offer.status === 'pending' && !isAlreadyOrdered && toggleItem(item.id)}
+                  onClick={() => {
+                    if (offer.status !== 'pending' || isAlreadyOrdered) return;
+                    onToggleItem?.(item.description, offer.id);
+                  }}
                   className={`
-                    flex items-center justify-between p-3 rounded-xl border transition-all
-                    ${offer.status === 'pending' && !isAlreadyOrdered ? 'cursor-pointer' : ''}
-                    ${isAlreadyOrdered
+                  flex items-center justify-between p-3 rounded-xl border transition-all
+                  ${offer.status === 'pending' && !isAlreadyOrdered ? 'cursor-pointer' : ''}
+                  ${isAlreadyOrdered
                       ? 'bg-slate-100 border-slate-200 opacity-40 grayscale pointer-events-none'
                       : isSelected
                         ? 'bg-primary/5 border-primary/20 shadow-sm'
-                        : 'bg-slate-50/50 border-slate-100/50'
+                        : isSelectedByOther
+                          ? 'bg-slate-50 border-slate-100 opacity-60'
+                          : 'bg-slate-50/50 border-slate-100/50'
                     }
-                    hover:bg-slate-50 transition-colors relative
-                  `}
+                  hover:bg-slate-50 transition-colors relative
+                `}
                 >
-                  <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-3">
                     {offer.status === 'pending' && !isAlreadyOrdered && (
                       <div className={`
-                        size-5 rounded-md border-2 flex items-center justify-center transition-all
-                        ${isSelected ? 'bg-primary border-primary' : 'bg-white border-slate-200'}
-                      `}>
-                        {isSelected && (
-                          <span className="material-symbols-outlined text-white text-[14px] font-black">check</span>
-                        )}
+                      size-5 rounded-md border flex items-center justify-center transition-all
+                      ${isSelected ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200'}
+                    `}>
+                        {isSelected && <span className="material-symbols-outlined text-sm font-black">check</span>}
                       </div>
                     )}
-                    {isAlreadyOrdered && (
-                      <span className="material-symbols-outlined text-slate-400 text-lg">check_circle</span>
-                    )}
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-slate-700 leading-tight">
+                    <div className="flex flex-col">
+                      <span className={`text-[11px] font-bold ${isSelected ? 'text-primary' : 'text-slate-900'} leading-tight`}>
                         {item.description}
-                        {isAlreadyOrdered && <span className="ml-2 text-[8px] font-black bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded uppercase tracking-widest">Já Comprado</span>}
-                      </p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">{item.quantity} {item.unit}</p>
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        {item.quantity} {item.unit}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black text-slate-900">R$ {item.unitPrice?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Total: R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="text-right flex flex-col items-end">
+                    <span className={`text-xs font-black ${isSelected ? 'text-primary' : 'text-slate-900'}`}>
+                      R$ {item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">
+                      TOTAL: R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
+
+                  {isSelectedByOther && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-xl pointer-events-none">
+                      <span className="bg-slate-700 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">
+                        Em outro fornecedor
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
-            {!isExpanded && (offer.items?.length || 0) > 2 && (
-              <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-1 bg-slate-50/30 rounded-lg">... e mais {offer.items!.length - 2} itens</p>
-            )}
           </div>
-        </div>
-
-        {/* Rodapé de Ações */}
-        <div className="mt-auto pt-4 relative">
-          {successOrderId ? (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
-                <span className="material-symbols-outlined text-lg">check_circle</span>
-                Itens aceitos com sucesso!
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setSuccessOrderId(null)}
-                  className="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-600 font-black text-[9px] uppercase tracking-widest hover:bg-emerald-100/50 transition-all"
-                >
-                  Continuar
-                </button>
-                <Link
-                  to={`/demanda/${offer.demandId}/pedido?order=${successOrderId}`}
-                  className="h-10 rounded-xl bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-                >
-                  Ver Pedido
-                  <span className="material-symbols-outlined text-sm">description</span>
-                </Link>
-              </div>
-            </div>
-          ) : offer.status === 'pending' ? (
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={handleReject}
-                className="h-12 rounded-xl border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-                Rejeitar
-              </button>
-              <button
-                onClick={handleAccept}
-                className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[18px]">check</span>
-                {selectedItemIds.length === offer.items?.length ? 'Aceitar Proposta' : `Aceitar ${selectedItemIds.length} itens`}
-              </button>
-            </div>
-          ) : offer.status === 'accepted' ? (
-            <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
-              <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
-            </Link>
-          ) : (
-            <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
-              <span className="material-symbols-outlined text-[18px]">cancel</span>
-              Proposta Recusada
-            </div>
+          {!isExpanded && (offer.items?.length || 0) > 2 && (
+            <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-1 bg-slate-50/30 rounded-lg">... e mais {offer.items!.length - 2} itens</p>
           )}
         </div>
       </div>
+
+      {/* Rodapé de Ações */}
+      <div className="mt-auto pt-4 relative">
+        {successOrderId ? (
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
+              <span className="material-symbols-outlined text-lg">check_circle</span>
+              Itens aceitos com sucesso!
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setSuccessOrderId(null)}
+                className="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-600 font-black text-[9px] uppercase tracking-widest hover:bg-emerald-100/50 transition-all"
+              >
+                Continuar
+              </button>
+              <Link
+                to={`/demanda/${offer.demandId}/pedido?order=${successOrderId}`}
+                className="h-10 rounded-xl bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+              >
+                Ver Pedido
+                <span className="material-symbols-outlined text-sm">description</span>
+              </Link>
+            </div>
+          </div>
+        ) : offer.status === 'pending' ? (
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={handleReject}
+              className="h-12 rounded-xl border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+              Rejeitar
+            </button>
+            <button
+              onClick={handleAccept}
+              className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">check</span>
+              {selectedItemIds.length === offer.items?.length ? 'Aceitar Proposta' : `Aceitar ${selectedItemIds.length} itens`}
+            </button>
+          </div>
+        ) : offer.status === 'accepted' ? (
+          <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
+            <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
+          </Link>
+        ) : (
+          <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
+            <span className="material-symbols-outlined text-[18px]">cancel</span>
+            Proposta Recusada
+          </div>
+        )}
+      </div>
     </div>
+    </div >
   );
 };
 

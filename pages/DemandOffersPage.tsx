@@ -13,6 +13,21 @@ const DemandOffersPage: React.FC = () => {
   const { demands, offers, orders } = useDemands();
   const [sortBy, setSortBy] = useState<'menor' | 'maior' | 'recent'>('menor');
 
+  // Mapeia Descriçao do Item -> ID da Oferta (quem está fornecendo esse item no carrinho global)
+  const [selectionMap, setSelectionMap] = useState<Record<string, string>>({});
+
+  const toggleItemSelection = (itemDescription: string, offerId: string) => {
+    setSelectionMap(prev => {
+      const newMap = { ...prev };
+      if (newMap[itemDescription] === offerId) {
+        delete newMap[itemDescription];
+      } else {
+        newMap[itemDescription] = offerId;
+      }
+      return newMap;
+    });
+  };
+
   const demand = demands.find(d => d.id === id);
 
   const demandOffers = useMemo(() => {
@@ -76,9 +91,38 @@ const DemandOffersPage: React.FC = () => {
     };
   }, [orders, id, demand]);
 
+  const globalTotal = useMemo(() => {
+    let total = 0;
+    Object.entries(selectionMap).forEach(([desc, offerId]) => {
+      const offer = offers.find(o => o.id === offerId);
+      const item = offer?.items?.find(i => i.description === desc);
+      if (item) total += item.totalPrice;
+    });
+    return total;
+  }, [selectionMap, offers]);
+
   return (
     <Layout showSidebar={false}>
       <div className="max-w-[1300px] mx-auto flex flex-col gap-10 pb-20">
+
+        {/* Floating Global Total Bar */}
+        {globalTotal > 0 && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <div className="bg-slate-900 text-white px-10 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-8 border border-slate-800 backdrop-blur-xl bg-opacity-95">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total dos selecionados</span>
+                <span className="text-3xl font-black text-primary-green tracking-tighter">
+                  R$ {globalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="h-10 w-px bg-slate-800"></div>
+              <div className="flex flex-col text-right">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Itens marcados</span>
+                <span className="text-xl font-black text-white">{Object.keys(selectionMap).length} itens</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navegação e Cabeçalho */}
         <div className="flex flex-col gap-6">
@@ -201,6 +245,8 @@ const DemandOffersPage: React.FC = () => {
                     offer={offer}
                     isBest={offer.value === minPrice && offer.status === 'pending'}
                     referenceBudget={savingsData?.refBudget}
+                    selectionMap={selectionMap}
+                    onToggleItem={toggleItemSelection}
                   />
                 ))}
               </div>
