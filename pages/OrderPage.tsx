@@ -94,13 +94,19 @@ const OrderPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-16 p-12 border-b border-slate-100">
             <div className="space-y-4">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">COMPRADOR (EMISSOR)</h4>
-              <p className="font-black text-slate-900 text-xl">{user?.user_metadata?.company_name || user?.user_metadata?.name || user?.email || 'Comprador'}</p>
+              <p className="font-black text-slate-900 text-xl">{demand.ownerCompany || demand.userName || 'Comprador'}</p>
+              {demand.ownerCnpj && (
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ: {demand.ownerCnpj}</p>
+              )}
               <p className="text-slate-500 text-sm font-medium">{demand.location}</p>
             </div>
             <div className="space-y-4 text-right flex flex-col items-end">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">VENDEDOR (DESTINATÁRIO)</h4>
-              <p className="font-black text-slate-900 text-xl">{currentOffer.sellerName}</p>
-              <div className="flex items-center gap-1.5 text-primary text-[10px] font-black bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 uppercase">
+              <p className="font-black text-slate-900 text-xl">{currentOffer.sellerCompany || currentOffer.sellerName}</p>
+              {currentOffer.sellerCnpj && (
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CNPJ: {currentOffer.sellerCnpj}</p>
+              )}
+              <div className="flex items-center gap-1.5 text-primary text-[10px] font-black bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 uppercase mt-2">
                 <span className="material-symbols-outlined text-[14px]">verified</span> PARCEIRO VERIFICADO
               </div>
             </div>

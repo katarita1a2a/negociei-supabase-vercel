@@ -52,7 +52,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Fetch Demands
         const { data: demandsData, error: demandsError } = await supabase
           .from('demands')
-          .select('*, demand_items(*)')
+          .select('*, demand_items(*), owner:profiles(name, company_name, cnpj)')
           .order('created_at', { ascending: false });
 
         if (demandsError) throw demandsError;
@@ -72,7 +72,10 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
             d.status === 'analise' ? DemandStatus.EM_ANALISE : DemandStatus.FECHADO,
           isPremium: false,
           ownerId: d.user_id,
-          offersCount: 0, // We could count offers here or in a separate query
+          userName: d.owner?.name,
+          ownerCompany: d.owner?.company_name,
+          ownerCnpj: d.owner?.cnpj,
+          offersCount: 0,
           tags: d.category ? [d.category] : [],
           items: (d.demand_items || []).map((item: any) => ({
             id: item.id,
@@ -92,7 +95,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           .from('offers')
           .select(`
             *,
-            seller:profiles(name, rating),
+            seller:profiles(name, rating, company_name, cnpj),
             items:offer_items(*)
           `)
           .order('created_at', { ascending: false });
@@ -105,6 +108,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           demandId: o.demand_id,
           sellerId: o.seller_id,
           sellerName: o.seller?.name || 'Fornecedor',
+          sellerCompany: o.seller?.company_name,
+          sellerCnpj: o.seller?.cnpj,
           sellerRating: o.seller?.rating || 5.0,
           sellerReviews: 0,
           value: o.total_price,

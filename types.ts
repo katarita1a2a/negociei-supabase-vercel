@@ -59,6 +59,8 @@ export interface Demand {
   isPremium: boolean;
   ownerId: string;
   userName?: string;
+  ownerCompany?: string;
+  ownerCnpj?: string;
   userAvatar?: string;
   offersCount: number;
   tags: string[];
@@ -71,6 +73,8 @@ export interface Offer {
   demandId: string;
   sellerId: string;
   sellerName: string;
+  sellerCompany?: string;
+  sellerCnpj?: string;
   sellerRating: number;
   sellerReviews: number;
   value: number;
