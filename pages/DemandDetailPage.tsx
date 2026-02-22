@@ -17,6 +17,12 @@ const DemandDetailPage: React.FC = () => {
   const demand = demands.find(d => d.id === id);
   const [offerMessage, setOfferMessage] = useState('');
   const [shippingCost, setShippingCost] = useState<number>(0);
+  const [deadlineDays, setDeadlineDays] = useState<number>(5);
+  const [warrantyMonths, setWarrantyMonths] = useState<number>(0);
+  const [paymentTerms, setPaymentTerms] = useState<string>('À vista');
+  const [validUntil, setValidUntil] = useState<string>(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
   const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,8 +63,10 @@ const DemandDetailPage: React.FC = () => {
       sellerReviews: 0,
       value: offerTotal,
       shippingCost,
-      deadlineDays: 5,
-      warrantyMonths: 12,
+      deadlineDays,
+      warrantyMonths,
+      paymentTerms,
+      validUntil,
       message: offerMessage,
       verified: !!user?.user_metadata?.verified,
       status: 'pending',
@@ -355,6 +363,53 @@ const DemandDetailPage: React.FC = () => {
                     <button onClick={() => setShippingCost(0)} className={`h-12 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${shippingCost === 0 ? 'bg-primary-green text-slate-900 border-primary-green shadow-lg shadow-emerald-100' : 'bg-transparent text-slate-400 border-slate-100 hover:border-slate-200'}`}>
                       Frete Grátis
                     </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Prazo (Dias)</label>
+                    <input
+                      type="number"
+                      value={deadlineDays}
+                      onChange={(e) => setDeadlineDays(Number(e.target.value))}
+                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Garantia (Meses)</label>
+                    <input
+                      type="number"
+                      value={warrantyMonths}
+                      onChange={(e) => setWarrantyMonths(Number(e.target.value))}
+                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Pagamento</label>
+                    <select
+                      value={paymentTerms}
+                      onChange={(e) => setPaymentTerms(e.target.value)}
+                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                    >
+                      <option value="À vista">À vista</option>
+                      <option value="50% antecipado / 50% entrega">50/50</option>
+                      <option value="30 dias">30 dias</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito</option>
+                      <option value="Boleto Bancário">Boleto Bancário</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Proposta Válida até</label>
+                    <input
+                      type="date"
+                      value={validUntil}
+                      onChange={(e) => setValidUntil(e.target.value)}
+                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                    />
                   </div>
                 </div>
 

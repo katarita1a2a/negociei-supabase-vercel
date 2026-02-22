@@ -93,50 +93,77 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t border-slate-200/50 mt-2">
             <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-              <span className="material-symbols-outlined text-[18px] text-primary">local_shipping</span>
+              <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">local_shipping</span>
               {offer.shippingCost === 0 ? <span className="text-emerald-600">Frete Grátis</span> : `R$ ${offer.shippingCost.toLocaleString('pt-BR')}`}
             </div>
             <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-              <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
+              <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">schedule</span>
               {offer.deadlineDays} dias úteis
             </div>
+            {offer.warrantyMonths > 0 && (
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
+                <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">verified_user</span>
+                {offer.warrantyMonths} meses de garantia
+              </div>
+            )}
           </div>
+
+          {(offer.paymentTerms || offer.validUntil) && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 mt-1 border-t border-slate-200/30">
+              {offer.paymentTerms && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pagamento</span>
+                  <span className="text-[10px] font-bold text-slate-600 uppercase">{offer.paymentTerms}</span>
+                </div>
+              )}
+              {offer.validUntil && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Válida até</span>
+                  <span className="text-[10px] font-bold text-slate-600">{new Date(offer.validUntil).toLocaleDateString('pt-BR')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Resumo da Mensagem */}
         <div className="relative">
           <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2 px-1">
-            "{offer.message}"
+            "{offer.message || 'Sem mensagem adicional.'}"
           </p>
         </div>
 
         {/* Itens e Valores Unitários (Sempre visível ou com controle) */}
         <div className="space-y-4 pt-4 border-t border-slate-100">
           <div className="flex items-center justify-between px-1">
-            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comparativo de Itens</h5>
+            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">list_alt</span>
+              Comparativo de Itens
+            </h5>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+              className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
             >
               {isExpanded ? 'Ocultar' : 'Ver Detalhes'}
+              <span className="material-symbols-outlined text-[14px]">{isExpanded ? 'expand_less' : 'expand_more'}</span>
             </button>
           </div>
 
           <div className="space-y-2">
             {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100/50">
+              <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100/50 hover:bg-slate-50 transition-colors">
                 <div className="flex-1">
                   <p className="text-xs font-bold text-slate-700 leading-tight">{item.description}</p>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">{item.quantity} {item.unit}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-black text-slate-900">R$ {item.unitPrice?.toLocaleString('pt-BR')}</p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Total: R$ {item.totalPrice.toLocaleString('pt-BR')}</p>
+                  <p className="text-xs font-black text-slate-900">R$ {item.unitPrice?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Total: R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 </div>
               </div>
             ))}
             {!isExpanded && (offer.items?.length || 0) > 2 && (
-              <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-1">... e mais {offer.items!.length - 2} itens</p>
+              <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-1 bg-slate-50/30 rounded-lg">... e mais {offer.items!.length - 2} itens</p>
             )}
           </div>
         </div>

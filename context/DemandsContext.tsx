@@ -85,7 +85,11 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Fetch Offers
         const { data: offersData, error: offersError } = await supabase
           .from('offers')
-          .select('*')
+          .select(`
+            *,
+            seller:profiles(name, rating),
+            items:offer_items(*)
+          `)
           .order('created_at', { ascending: false });
 
         if (offersError) throw offersError;
@@ -95,18 +99,28 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           id: o.id,
           demandId: o.demand_id,
           sellerId: o.seller_id,
-          sellerName: 'Fornecedor', // This should ideally join with profiles
-          sellerRating: 5.0,
+          sellerName: o.seller?.name || 'Fornecedor',
+          sellerRating: o.seller?.rating || 5.0,
           sellerReviews: 0,
           value: o.total_price,
-          shippingCost: 0,
+          shippingCost: o.shipping_cost || 0,
           deadlineDays: parseInt(o.delivery_time) || 0,
-          warrantyMonths: 0,
+          warrantyMonths: o.warranty_months || 0,
+          paymentTerms: o.payment_terms || '',
+          validUntil: o.valid_until || '',
           message: o.message || '',
           verified: false,
           status: o.status === 'aceita' ? 'accepted' :
             o.status === 'rejeitada' ? 'rejected' : 'pending',
-          createdAt: o.created_at
+          createdAt: o.created_at,
+          items: (o.items || []).map((item: any) => ({
+            id: item.id,
+            description: item.name,
+            unit: item.unit,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            totalPrice: item.total_price
+          }))
         }));
 
         setOffers(transformedOffers);
@@ -233,6 +247,10 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           seller_id: user?.id,
           total_price: offer.value,
           delivery_time: offer.deadlineDays.toString(),
+          shipping_cost: offer.shippingCost,
+          warranty_months: offer.warrantyMonths,
+          payment_terms: offer.paymentTerms,
+          valid_until: offer.validUntil || null,
           message: offer.message,
           status: 'enviada'
         })
@@ -240,6 +258,24 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         .single();
 
       if (error) throw error;
+
+      // 2. Insert Offer Items
+      if (offer.items && offer.items.length > 0) {
+        const itemsToInsert = offer.items.map(item => ({
+          offer_id: offerData.id,
+          name: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('offer_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
 
       const newOffer = { ...offer, id: offerData.id };
       setOffers((prev) => [newOffer, ...prev]);
