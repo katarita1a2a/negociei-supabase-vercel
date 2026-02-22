@@ -45,7 +45,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                const url = `${window.location.origin}/demanda/${demand.id}`;
+                const url = `${window.location.origin}/#/demanda/${demand.id}`;
                 navigator.clipboard.writeText(url);
                 alert("Link da demanda copiado!");
               }}

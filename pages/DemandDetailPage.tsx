@@ -105,7 +105,7 @@ const DemandDetailPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                const url = `${window.location.origin}/demanda/${demand.id}`;
+                const url = `${window.location.origin}/#/demanda/${demand.id}`;
                 const text = `Confira esta demanda no Negociei.app: ${demand.title}\n\n${url}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
               }}
@@ -116,7 +116,7 @@ const DemandDetailPage: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                const url = `${window.location.origin}/demanda/${demand.id}`;
+                const url = `${window.location.origin}/#/demanda/${demand.id}`;
                 navigator.clipboard.writeText(url);
                 alert("Link direto da demanda copiado!");
               }}
