@@ -17,7 +17,7 @@ interface DemandsContextType {
   updateDemand: (demand: Demand) => Promise<void>;
   deleteDemand: (id: string) => Promise<void>;
   addOffer: (offer: Offer) => Promise<void>;
-  acceptOffer: (offerId: string, selectedItemIds?: string[]) => Promise<void>;
+  acceptOffer: (offerId: string, selectedItemIds?: string[]) => Promise<string | void>;
   rejectOffer: (offerId: string) => Promise<void>;
   resetFilters: () => void;
 }
@@ -413,12 +413,12 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
           return o;
         }));
-
         setDemands(prevDemands => prevDemands.map(d => {
           if (d.id === targetDemandId) return { ...d, status: DemandStatus.FECHADO };
           return d;
         }));
       }
+      return orderData.id;
 
     } catch (error) {
       console.error('Error accepting offer:', error);

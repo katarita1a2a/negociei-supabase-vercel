@@ -10,7 +10,7 @@ import { DemandStatus, Offer } from '../types';
 const DemandOffersPage: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
-  const { demands, offers } = useDemands();
+  const { demands, offers, orders } = useDemands();
   const [sortBy, setSortBy] = useState<'menor' | 'maior' | 'recent'>('menor');
 
   const demand = demands.find(d => d.id === id);
@@ -65,6 +65,17 @@ const DemandOffersPage: React.FC = () => {
     );
   }
 
+  const { purchasedCount, totalCount } = useMemo(() => {
+    const demandOrders = orders.filter(o => o.demandId === id);
+    const purchasedNames = new Set();
+    demandOrders.forEach(ord => ord.items?.forEach(i => purchasedNames.add(i.description)));
+
+    return {
+      purchasedCount: purchasedNames.size,
+      totalCount: demand?.items?.length || 0
+    };
+  }, [orders, id, demand]);
+
   return (
     <Layout showSidebar={false}>
       <div className="max-w-[1300px] mx-auto flex flex-col gap-10 pb-20">
@@ -87,9 +98,25 @@ const DemandOffersPage: React.FC = () => {
               <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
                 {demand.title}
               </h1>
-              <p className="text-slate-500 text-lg font-medium">
-                Compare as <strong className="text-primary">{demandOffers.length} propostas</strong> recebidas com a sua estimativa original.
-              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <p className="text-slate-500 text-lg font-medium">
+                  Compare as <strong className="text-primary">{demandOffers.length} propostas</strong> recebidas.
+                </p>
+                {totalCount > 0 && (
+                  <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-600 tracking-widest">
+                      <span className="material-symbols-outlined text-lg text-emerald-500">shopping_cart</span>
+                      {purchasedCount} de {totalCount} itens comprados
+                    </div>
+                    <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{ width: `${(purchasedCount / totalCount) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

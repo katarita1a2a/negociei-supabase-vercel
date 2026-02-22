@@ -15,6 +15,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>(offer.items?.map(i => i.id) || []);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
 
   const handleAccept = async () => {
     if (selectedItemIds.length === 0) {
@@ -28,8 +29,10 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
 
     if (window.confirm(confirmMsg)) {
       try {
-        await acceptOffer(offer.id, selectedItemIds);
-        navigate(`/demanda/${offer.demandId}/pedido`);
+        const orderId = await acceptOffer(offer.id, selectedItemIds);
+        if (orderId) {
+          setSuccessOrderId(orderId as string);
+        }
       } catch (err) {
         console.error('Error accepting offer:', err);
         alert("Erro ao aceitar a proposta. Por favor, tente novamente.");
@@ -237,9 +240,31 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
         </div>
 
         {/* Rodapé de Ações */}
-        <div className="grid grid-cols-2 gap-4 mt-auto pt-4">
-          {offer.status === 'pending' ? (
-            <>
+        <div className="mt-auto pt-4 relative">
+          {successOrderId ? (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                Itens aceitos com sucesso!
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setSuccessOrderId(null)}
+                  className="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-600 font-black text-[9px] uppercase tracking-widest hover:bg-emerald-100/50 transition-all"
+                >
+                  Continuar
+                </button>
+                <Link
+                  to={`/demanda/${offer.demandId}/pedido?order=${successOrderId}`}
+                  className="h-10 rounded-xl bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                >
+                  Ver Pedido
+                  <span className="material-symbols-outlined text-sm">description</span>
+                </Link>
+              </div>
+            </div>
+          ) : offer.status === 'pending' ? (
+            <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={handleReject}
                 className="h-12 rounded-xl border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2"
@@ -254,13 +279,13 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget })
                 <span className="material-symbols-outlined text-[18px]">check</span>
                 {selectedItemIds.length === offer.items?.length ? 'Aceitar Proposta' : `Aceitar ${selectedItemIds.length} itens`}
               </button>
-            </>
+            </div>
           ) : offer.status === 'accepted' ? (
-            <Link to={`/demanda/${offer.demandId}/pedido`} className="col-span-2 h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
+            <Link to={`/demanda/${offer.demandId}/pedido`} className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">
               <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
             </Link>
           ) : (
-            <div className="col-span-2 h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
+            <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
               <span className="material-symbols-outlined text-[18px]">cancel</span>
               Proposta Recusada
             </div>

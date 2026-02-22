@@ -11,30 +11,46 @@ const OrderPage: React.FC = () => {
   const { id } = useParams();
   const { demands, offers, orders } = useDemands();
 
-  const { demand, acceptedOffer, orderRecord } = useMemo(() => {
+  const { demand, acceptedOffer, orderRecord, specificOffer } = useMemo(() => {
     const d = demands.find(item => item.id === id);
-    const o = offers.find(item => item.demandId === id && item.status === 'accepted');
     const ord = orders.find(item => item.demandId === id && item.status === 'ativo');
-    return { demand: d, acceptedOffer: o, orderRecord: ord };
+    const o = offers.find(item => item.demandId === id && item.status === 'accepted');
+
+    // If no globally accepted offer, look for the offer linked to the active order
+    const specOff = ord ? offers.find(off => off.id === ord.offerId) : null;
+
+    return { demand: d, acceptedOffer: o, orderRecord: ord, specificOffer: specOff };
   }, [demands, offers, orders, id]);
 
   const handlePrint = () => window.print();
 
-  if (!demand || !acceptedOffer) return <Layout showSidebar={false}><div className="py-20 text-center">Processando Pedido...</div></Layout>;
+  const currentOffer = specificOffer || acceptedOffer;
+
+  if (!demand || !currentOffer || !orderRecord) {
+    return (
+      <Layout showSidebar={false}>
+        <div className="py-24 text-center space-y-4">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl font-black text-slate-900">Processando Pedido...</p>
+          <p className="text-slate-500 text-sm">Se esta mensagem persistir, verifique se a oferta foi aceita corretamente.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   // Use real orderNumber if available, fallback to ORD-hash
   const displayOrderNumber = orderRecord?.orderNumber
     ? orderRecord.orderNumber.toString().padStart(4, '0')
-    : acceptedOffer.id.substring(acceptedOffer.id.length - 6);
+    : currentOffer.id.substring(currentOffer.id.length - 6);
 
   const orderId = `ORD-${displayOrderNumber}`;
 
   const itemsSubtotal = useMemo(() => {
-    const items = orderRecord?.items || acceptedOffer.items || [];
+    const items = orderRecord?.items || currentOffer.items || [];
     return items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
-  }, [orderRecord, acceptedOffer]);
+  }, [orderRecord, currentOffer]);
 
-  const finalOrderPrice = orderRecord?.finalPrice || acceptedOffer.value;
+  const finalOrderPrice = orderRecord?.finalPrice || currentOffer.value;
 
   return (
     <Layout showSidebar={false}>
@@ -63,7 +79,7 @@ const OrderPage: React.FC = () => {
             </div>
             <div className="space-y-4 text-right flex flex-col items-end">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">VENDEDOR (DESTINATÁRIO)</h4>
-              <p className="font-black text-slate-900 text-xl">{acceptedOffer.sellerName}</p>
+              <p className="font-black text-slate-900 text-xl">{currentOffer.sellerName}</p>
               <div className="flex items-center gap-1.5 text-primary text-[10px] font-black bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 uppercase">
                 <span className="material-symbols-outlined text-[14px]">verified</span> PARCEIRO VERIFICADO
               </div>
@@ -74,7 +90,7 @@ const OrderPage: React.FC = () => {
             <table className="w-full border-collapse">
               <thead><tr className="bg-slate-50 border-b-2 border-slate-100"><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-left">DESCRIÇÃO DOS ITENS</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-center">QTD</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-right">UNITÁRIO</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-right">TOTAL</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
-                {(orderRecord?.items || acceptedOffer.items || []).map(item => (
+                {(orderRecord?.items || currentOffer.items || []).map(item => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors"><td className="py-5 px-6 font-bold text-slate-800 text-sm">{item.description}</td><td className="py-5 px-6 text-center font-black text-slate-900 text-sm">{item.quantity}</td><td className="py-5 px-6 text-right text-slate-500 text-sm">R$ {(item.unitPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td className="py-5 px-6 text-right font-black text-slate-900 text-sm">R$ {((item.unitPrice || 0) * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
                 ))}
               </tbody>
@@ -82,7 +98,7 @@ const OrderPage: React.FC = () => {
 
             <div className="flex flex-col items-end gap-3 pt-8 border-t-2 border-slate-100">
               <div className="flex justify-between w-full md:w-1/3 text-xs font-bold text-slate-400 uppercase"><span>SUBTOTAL ITENS:</span><span className="text-slate-900">R$ {itemsSubtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
-              <div className="flex justify-between w-full md:w-1/3 text-xs font-bold text-slate-400 uppercase"><span>FRETE / ENTREGA:</span><span className="text-slate-900">R$ {acceptedOffer.shippingCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between w-full md:w-1/3 text-xs font-bold text-slate-400 uppercase"><span>FRETE / ENTREGA:</span><span className="text-slate-900">R$ {currentOffer.shippingCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
               <div className="flex justify-between items-center w-full md:w-1/2 mt-6 p-6 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-200">
                 <span className="text-xs font-black uppercase tracking-widest opacity-60">TOTAL LÍQUIDO DO PEDIDO</span>
                 <span className="text-4xl font-black text-primary-green tracking-tighter">R$ {finalOrderPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
@@ -92,7 +108,7 @@ const OrderPage: React.FC = () => {
 
           <div className="bg-slate-50 p-12 text-center text-[10px] text-slate-400 font-bold border-t border-slate-100 leading-relaxed">
             Documento eletrônico assinado e validado pela plataforma Negociei.app. <br />
-            ID Único da Transação: {acceptedOffer.id} • Data: {new Date().toLocaleDateString('pt-BR')}
+            ID Único da Transação: {currentOffer.id} • Data: {new Date().toLocaleDateString('pt-BR')}
           </div>
         </div>
       </div>
