@@ -9,6 +9,7 @@ interface DemandsContextType {
   demands: Demand[];
   filteredDemands: Demand[];
   offers: Offer[];
+  orders: Order[];
   filters: DemandFilters;
   isLoading: boolean;
   setFilters: React.Dispatch<React.SetStateAction<DemandFilters>>;
@@ -35,6 +36,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   const { user } = useAuth();
   const [demands, setDemands] = useState<Demand[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [filters, setFilters] = useState<DemandFilters>(initialFilters);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -124,6 +126,28 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         }));
 
         setOffers(transformedOffers);
+
+        // Fetch Orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (ordersError) throw ordersError;
+
+        const transformedOrders: Order[] = (ordersData || []).map(o => ({
+          id: o.id,
+          demandId: o.demand_id,
+          offerId: o.offer_id,
+          buyerId: o.buyer_id,
+          sellerId: o.seller_id,
+          finalPrice: o.final_price,
+          status: o.status === 'ativo' ? 'ativo' : o.status === 'concluido' ? 'concluido' : 'cancelado',
+          createdAt: o.created_at,
+          orderNumber: o.order_number
+        }));
+
+        setOrders(transformedOrders);
 
         // Optional: Update offersCount for demands
         setDemands(prev => prev.map(d => ({
@@ -302,7 +326,37 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
       // Update demand status
       await supabase.from('demands').update({ status: 'fechado' }).eq('id', targetDemandId);
 
+      // Create Order in DB
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          demand_id: targetDemandId,
+          offer_id: offerId,
+          buyer_id: user?.id,
+          seller_id: selectedOffer.sellerId,
+          final_price: selectedOffer.value,
+          status: 'ativo'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      const newOrder: Order = {
+        id: orderData.id,
+        demandId: orderData.demand_id,
+        offerId: orderData.offer_id,
+        buyerId: orderData.buyer_id,
+        sellerId: orderData.seller_id,
+        finalPrice: orderData.final_price,
+        status: 'ativo',
+        createdAt: orderData.created_at,
+        orderNumber: orderData.order_number
+      };
+
       // Update local state
+      setOrders(prev => [newOrder, ...prev]);
+
       setOffers(prevOffers => prevOffers.map(o => {
         if (o.id === offerId) return { ...o, status: 'accepted' };
         if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
@@ -357,7 +411,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [demands, filters]);
 
   return (
-    <DemandsContext.Provider value={{ demands, filteredDemands, offers, filters, isLoading, setFilters, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
+    <DemandsContext.Provider value={{ demands, filteredDemands, offers, orders, filters, isLoading, setFilters, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
       {children}
     </DemandsContext.Provider>
   );

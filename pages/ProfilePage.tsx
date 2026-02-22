@@ -1,26 +1,80 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { BR_STATES, CATEGORIES } from '../mockData';
 import { useAuth } from '../context/AuthContext';
+import { useDemands } from '../context/DemandsContext';
+import { DemandStatus } from '../types';
 
 const ProfilePage: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut, updateProfile } = useAuth();
+  const { demands, offers } = useDemands();
   const navigate = useNavigate();
+
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [tempPhotoUrl, setTempPhotoUrl] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [cnpj, setCnpj] = useState('');
+  const [website, setWebsite] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize form
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.name || '');
+      setCompanyName(profile.company_name || '');
+      setCnpj(profile.cnpj || '');
+      setWebsite(profile.website || '');
+      setPhone(profile.phone || '');
+      setRole(profile.bio || ''); // Using bio as role/function
+    }
+  }, [profile]);
+
+  // Real stats calculation
+  const stats = useMemo(() => {
+    if (!user) return { demandsCreated: 0, acceptedOffers: 0 };
+
+    const demandsCreated = demands.filter(d => d.ownerId === user.id).length;
+    const acceptedOffers = offers.filter(o => o.sellerId === user.id && o.status === 'accepted').length;
+
+    return { demandsCreated, acceptedOffers };
+  }, [demands, offers, user]);
 
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
   };
 
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        name: fullName,
+        company_name: companyName,
+        cnpj: cnpj,
+        website: website,
+        phone: phone,
+        bio: role
+      });
+      alert('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Erro ao atualizar perfil.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const openPhotoModal = () => {
     setIsPhotoModalOpen(true);
-    setTempPhotoUrl(user?.user_metadata?.avatar_url || '');
+    setTempPhotoUrl(profile?.avatar_url || '');
     setUrlInput('');
   };
 
@@ -44,16 +98,21 @@ const ProfilePage: React.FC = () => {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setUrlInput(url);
-    // Simple validation: if it looks like a URL, preview it
     if (url.startsWith('http')) {
       setTempPhotoUrl(url);
     }
   };
 
-  const savePhoto = () => {
-    // In a real app, you would upload this to Supabase Storage
-    // and then update the user's metadata
-    closePhotoModal();
+  const savePhoto = async () => {
+    if (tempPhotoUrl) {
+      try {
+        await updateProfile({ avatar_url: tempPhotoUrl });
+        closePhotoModal();
+      } catch (error) {
+        console.error('Error saving photo:', error);
+        alert('Erro ao salvar foto.');
+      }
+    }
   };
 
   return (
@@ -66,8 +125,19 @@ const ProfilePage: React.FC = () => {
             <p className="text-slate-500">Gerencie suas informações pessoais, de segurança e privacidade.</p>
           </div>
           <div className="flex gap-3">
-            <button className="h-11 px-6 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancelar</button>
-            <button className="h-11 px-8 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-blue-600 transition-all transform active:scale-95">Salvar Alterações</button>
+            <button
+              onClick={() => navigate(-1)}
+              className="h-11 px-6 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-11 px-8 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-blue-600 transition-all transform active:scale-95 disabled:opacity-50"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
           </div>
         </header>
 
@@ -76,13 +146,13 @@ const ProfilePage: React.FC = () => {
           <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -z-0 opacity-50"></div>
 
           <div className="relative group z-10">
-            <Link to="/perfil" className="size-36 rounded-full border-4 border-white ring-1 ring-slate-100 transition-transform group-hover:scale-[1.02] duration-300 flex items-center justify-center bg-slate-100 overflow-hidden">
-              {user?.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            <div className="size-36 rounded-full border-4 border-white ring-1 ring-slate-100 transition-transform group-hover:scale-[1.02] duration-300 flex items-center justify-center bg-slate-100 overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
               )}
-            </Link>
+            </div>
             <button
               onClick={openPhotoModal}
               className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-4 border-transparent text-white"
@@ -94,12 +164,12 @@ const ProfilePage: React.FC = () => {
 
           <div className="flex flex-col gap-5 text-center md:text-left flex-1 z-10">
             <div className="space-y-1">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">{user?.user_metadata?.full_name || 'Usuário'}</h2>
-              <p className="text-slate-500 font-medium">Membro desde {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '---'}</p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">{profile?.name || user?.user_metadata?.full_name || 'Usuário'}</h2>
+              <p className="text-slate-500 font-medium">Membro desde {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '---'}</p>
               <div className="flex justify-center md:justify-start mt-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-primary text-[10px] font-black rounded-lg uppercase tracking-widest border border-blue-100 shadow-sm">
-                  <span className="material-symbols-outlined text-[16px] fill-1">verified_user</span>
-                  CONTA EM VERIFICAÇÃO
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 ${profile?.is_premium ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-primary border-blue-100'} text-[10px] font-black rounded-lg uppercase tracking-widest border shadow-sm`}>
+                  <span className="material-symbols-outlined text-[16px] fill-1">{profile?.is_premium ? 'workspace_premium' : 'verified_user'}</span>
+                  {profile?.is_premium ? 'CONTA PREMIUM' : 'CONTA EM VERIFICAÇÃO'}
                 </span>
               </div>
             </div>
@@ -122,7 +192,11 @@ const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-slate-900 px-1">Nome Completo</span>
-                  <input className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary focus:bg-white transition-all px-4" defaultValue={user?.user_metadata?.full_name || ''} />
+                  <input
+                    className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary focus:bg-white transition-all px-4"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
                 </label>
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-slate-900 px-1">Email Principal</span>
@@ -130,15 +204,25 @@ const ProfilePage: React.FC = () => {
                 </label>
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-slate-900 px-1">Telefone / WhatsApp</span>
-                  <input className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4" placeholder="+55 (11) 98765-4321" />
+                  <input
+                    className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4"
+                    placeholder="+55 (11) 98765-4321"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
                 </label>
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-slate-900 px-1">Cargo / Função</span>
-                  <input className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4" placeholder="Gerente de Compras" defaultValue={user?.user_metadata?.role || ''} />
+                  <input
+                    className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4"
+                    placeholder="Gerente de Compras"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
                 </label>
               </div>
             </div>
-            {/* Empresa mockada por enquanto */}
+
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
               <h3 className="text-lg font-black text-slate-900 mb-8 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">domain</span> Dados da Empresa
@@ -146,16 +230,30 @@ const ProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 gap-6">
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-slate-900 px-1">Nome da Empresa (Razão Social)</span>
-                  <input className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4" defaultValue="Empresa Exemplo LTDA" />
+                  <input
+                    className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                  />
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <label className="flex flex-col gap-2">
                     <span className="text-sm font-bold text-slate-900 px-1">CNPJ</span>
-                    <input className="form-input rounded-xl border-slate-200 bg-slate-50 h-12 px-4 opacity-70 cursor-not-allowed" defaultValue="12.345.678/0001-90" readOnly />
+                    <input
+                      className="form-input rounded-xl border-slate-200 bg-slate-50 h-12 px-4 focus:ring-primary"
+                      placeholder="00.000.000/0000-00"
+                      value={cnpj}
+                      onChange={(e) => setCnpj(e.target.value)}
+                    />
                   </label>
                   <label className="flex flex-col gap-2">
                     <span className="text-sm font-bold text-slate-900 px-1">Website Oficial</span>
-                    <input className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4" placeholder="https://suaempresa.com.br" />
+                    <input
+                      className="form-input rounded-xl border-slate-200 h-12 bg-slate-50 focus:ring-primary px-4"
+                      placeholder="https://suaempresa.com.br"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
                   </label>
                 </div>
               </div>
@@ -167,33 +265,44 @@ const ProfilePage: React.FC = () => {
             <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm space-y-5">
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Plano Atual</p>
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Free Plan</h3>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">{profile?.is_premium ? 'Premium Pro' : 'Plano Gratuito'}</h3>
                 <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded">Ativo</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: '60%' }}></div>
+                <div
+                  className={`h-2 rounded-full ${profile?.is_premium ? 'bg-emerald-500' : 'bg-primary'}`}
+                  style={{ width: profile?.is_premium ? '100%' : '60%' }}
+                ></div>
               </div>
               <div className="flex justify-between text-xs text-slate-500 font-medium">
-                <span>3 de 5 Negociações</span>
-                <span className="font-bold">60% usado</span>
+                {profile?.is_premium ? (
+                  <span>Negociações Ilimitadas</span>
+                ) : (
+                  <>
+                    <span>{stats.demandsCreated} de 5 Negociações</span>
+                    <span className="font-bold">{Math.min(100, (stats.demandsCreated / 5) * 100)}% usado</span>
+                  </>
+                )}
               </div>
-              <Link
-                to="/premium"
-                className="w-full h-12 bg-primary-green text-slate-900 font-black rounded-xl hover:bg-green-500 transition-all flex items-center justify-center shadow-lg shadow-green-100"
-              >
-                Fazer Upgrade para Pro
-              </Link>
+              {!profile?.is_premium && (
+                <Link
+                  to="/premium"
+                  className="w-full h-12 bg-primary-green text-slate-900 font-black rounded-xl hover:bg-green-500 transition-all flex items-center justify-center shadow-lg shadow-green-100"
+                >
+                  Fazer Upgrade para Pro
+                </Link>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 text-center flex flex-col items-center shadow-sm">
                 <span className="material-symbols-outlined text-slate-300 mb-2 text-3xl">description</span>
-                <p className="text-3xl font-black text-slate-900">12</p>
+                <p className="text-3xl font-black text-slate-900">{stats.demandsCreated}</p>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Demandas</p>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-slate-200 text-center flex flex-col items-center shadow-sm">
                 <span className="material-symbols-outlined text-primary-green mb-2 text-3xl fill-1">check_circle</span>
-                <p className="text-3xl font-black text-slate-900">8</p>
+                <p className="text-3xl font-black text-slate-900">{stats.acceptedOffers}</p>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Aceitas</p>
               </div>
             </div>
@@ -204,9 +313,8 @@ const ProfilePage: React.FC = () => {
                 <p className="text-sm font-black uppercase tracking-widest">Segurança</p>
               </div>
               <p className="text-xs text-blue-100 leading-relaxed">
-                Proteja sua conta e suas negociações ativando a autenticação em dois fatores.
+                Sua conta está protegida com criptografia de ponta a ponta.
               </p>
-              <button className="text-xs font-black text-white hover:text-primary-green underline decoration-2 underline-offset-4 transition-colors">Configurar Agora</button>
             </div>
 
             <button

@@ -9,20 +9,25 @@ import { useAuth } from '../context/AuthContext';
 const OrderPage: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
-  const { demands, offers } = useDemands();
+  const { demands, offers, orders } = useDemands();
 
-  const { demand, acceptedOffer } = useMemo(() => {
+  const { demand, acceptedOffer, orderRecord } = useMemo(() => {
     const d = demands.find(item => item.id === id);
     const o = offers.find(item => item.demandId === id && item.status === 'accepted');
-    return { demand: d, acceptedOffer: o };
-  }, [demands, offers, id]);
+    const ord = orders.find(item => item.demandId === id && item.status === 'ativo');
+    return { demand: d, acceptedOffer: o, orderRecord: ord };
+  }, [demands, offers, orders, id]);
 
   const handlePrint = () => window.print();
 
   if (!demand || !acceptedOffer) return <Layout showSidebar={false}><div className="py-20 text-center">Processando Pedido...</div></Layout>;
 
-  // Fix: Reference acceptedOffer.id instead of non-existent offer.id
-  const orderId = `ORD-${acceptedOffer.id.substring(acceptedOffer.id.length - 6)}`;
+  // Use real orderNumber if available, fallback to ORD-hash
+  const displayOrderNumber = orderRecord?.orderNumber
+    ? orderRecord.orderNumber.toString().padStart(4, '0')
+    : acceptedOffer.id.substring(acceptedOffer.id.length - 6);
+
+  const orderId = `ORD-${displayOrderNumber}`;
   const itemsSubtotal = (acceptedOffer.items || []).reduce((acc, item) => acc + ((item.unitPrice || 0) * item.quantity), 0);
 
   return (

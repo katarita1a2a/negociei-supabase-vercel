@@ -11,6 +11,21 @@ export enum UserRole {
   BOTH = 'both'
 }
 
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  rating: number;
+  is_premium: boolean;
+  avatar_url?: string;
+  cnpj?: string;
+  company_name?: string;
+  website?: string;
+  phone?: string;
+  bio?: string;
+  created_at: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -69,6 +84,18 @@ export interface Offer {
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string; // ISO Format
   items?: DemandItem[];
+}
+
+export interface Order {
+  id: string;
+  demandId: string;
+  offerId: string;
+  buyerId: string;
+  sellerId: string;
+  finalPrice: number;
+  status: 'ativo' | 'concluido' | 'cancelado';
+  createdAt: string;
+  orderNumber: number;
 }
 
 export interface DemandFilters {
