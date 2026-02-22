@@ -44,8 +44,20 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
 
       {/* Info Principal (Centro) */}
       <div className="flex-1 min-w-0 space-y-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">#{demand.id}</p>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              const url = `${window.location.origin}/demanda/${demand.id}`;
+              navigator.clipboard.writeText(url);
+              alert("Link da demanda copiado!");
+            }}
+            className="size-6 rounded-md bg-slate-50 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-center border border-slate-100"
+            title="Copiar Link"
+          >
+            <span className="material-symbols-outlined text-[14px]">content_copy</span>
+          </button>
           <StatusBadge status={demand.status} className="scale-75 origin-left" />
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded">{demand.category}</span>
         </div>

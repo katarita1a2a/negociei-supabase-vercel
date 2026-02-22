@@ -105,13 +105,25 @@ const DemandDetailPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                const text = `Confira esta demanda no Negociei.app: ${demand.title}\n\n${window.location.href}`;
+                const url = `${window.location.origin}/demanda/${demand.id}`;
+                const text = `Confira esta demanda no Negociei.app: ${demand.title}\n\n${url}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
               }}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
             >
               <span className="material-symbols-outlined text-[18px]">share</span>
-              Compartilhar
+              WhatsApp
+            </button>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/demanda/${demand.id}`;
+                navigator.clipboard.writeText(url);
+                alert("Link direto da demanda copiado!");
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200"
+            >
+              <span className="material-symbols-outlined text-[18px]">content_copy</span>
+              Copiar Link
             </button>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">ID: #{demand.id}</span>
             <StatusBadge status={demand.status} />

@@ -34,14 +34,28 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
         <div className="flex items-start justify-between mb-4 gap-2">
           <div className="flex flex-wrap gap-1.5">
             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-colors ${demand.isPremium
-                ? 'bg-amber-50 text-amber-700 border-amber-100 group-hover:bg-amber-100'
-                : 'bg-slate-50 text-slate-500 border-slate-100 group-hover:bg-slate-100'
+              ? 'bg-amber-50 text-amber-700 border-amber-100 group-hover:bg-amber-100'
+              : 'bg-slate-50 text-slate-500 border-slate-100 group-hover:bg-slate-100'
               }`}>
               {demand.category}
             </span>
             {demand.isPremium && <PremiumBadge />}
           </div>
-          <StatusBadge status={demand.status} className="scale-90 origin-right" />
+          <div className="flex items-start gap-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                const url = `${window.location.origin}/demanda/${demand.id}`;
+                navigator.clipboard.writeText(url);
+                alert("Link da demanda copiado!");
+              }}
+              className="size-8 rounded-lg bg-slate-50 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-center border border-slate-100"
+              title="Copiar Link"
+            >
+              <span className="material-symbols-outlined text-[18px]">content_copy</span>
+            </button>
+            <StatusBadge status={demand.status} className="scale-90 origin-right" />
+          </div>
         </div>
 
         {/* Corpo: Título e Imagem (Layout Flex) */}
@@ -100,8 +114,8 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
             </div>
 
             <div className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg border ${demand.offersCount > 0
-                ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm'
-                : 'bg-slate-50 border-slate-100 text-slate-400'
+              ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm'
+              : 'bg-slate-50 border-slate-100 text-slate-400'
               }`}>
               <span className="text-xs font-black leading-none">{demand.offersCount}</span>
               <span className="text-[7px] font-black uppercase tracking-tighter">Ofertas</span>
