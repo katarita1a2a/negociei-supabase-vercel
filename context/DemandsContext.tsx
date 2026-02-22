@@ -17,7 +17,7 @@ interface DemandsContextType {
   updateDemand: (demand: Demand) => Promise<void>;
   deleteDemand: (id: string) => Promise<void>;
   addOffer: (offer: Offer) => Promise<void>;
-  acceptOffer: (offerId: string) => Promise<void>;
+  acceptOffer: (offerId: string, selectedItemIds?: string[]) => Promise<void>;
   rejectOffer: (offerId: string) => Promise<void>;
   resetFilters: () => void;
 }
@@ -131,7 +131,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Fetch Orders
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('*')
+          .select('*, order_items(*)')
           .order('created_at', { ascending: false });
 
         if (ordersError) throw ordersError;
@@ -145,7 +145,15 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           finalPrice: o.final_price,
           status: o.status === 'ativo' ? 'ativo' : o.status === 'concluido' ? 'concluido' : 'cancelado',
           createdAt: o.created_at,
-          orderNumber: o.order_number
+          orderNumber: o.order_number,
+          items: (o.order_items || []).map((oi: any) => ({
+            id: oi.id,
+            description: oi.description,
+            unit: oi.unit,
+            quantity: oi.quantity,
+            unitPrice: oi.unit_price,
+            totalPrice: oi.total_price
+          }))
         }));
 
         setOrders(transformedOrders);
@@ -315,19 +323,21 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
-  const acceptOffer = async (offerId: string) => {
+  const acceptOffer = async (offerId: string, selectedItemIds?: string[]) => {
     try {
       const selectedOffer = offers.find(o => o.id === offerId);
       if (!selectedOffer) return;
 
       const targetDemandId = selectedOffer.demandId;
+      const itemsToOrder = selectedItemIds
+        ? selectedOffer.items?.filter(item => selectedItemIds.includes(item.id))
+        : selectedOffer.items;
 
-      // Update offer status
-      await supabase.from('offers').update({ status: 'aceita' }).eq('id', offerId);
-      // Reject others
-      await supabase.from('offers').update({ status: 'rejeitada' }).eq('demand_id', targetDemandId).neq('id', offerId);
-      // Update demand status
-      await supabase.from('demands').update({ status: 'fechado' }).eq('id', targetDemandId);
+      if (!itemsToOrder || itemsToOrder.length === 0) {
+        throw new Error("Nenhum item selecionado para o pedido.");
+      }
+
+      const orderTotal = itemsToOrder.reduce((acc, curr) => acc + curr.totalPrice, 0);
 
       // Create Order in DB
       const { data: orderData, error: orderError } = await supabase
@@ -337,13 +347,49 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           offer_id: offerId,
           buyer_id: user?.id,
           seller_id: selectedOffer.sellerId,
-          final_price: selectedOffer.value,
+          final_price: orderTotal,
           status: 'ativo'
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
+
+      // Create Order Items
+      const orderItemsInsert = itemsToOrder.map(item => ({
+        order_id: orderData.id,
+        offer_item_id: item.id,
+        description: item.description,
+        unit: item.unit,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.totalPrice
+      }));
+
+      const { error: oiError } = await supabase
+        .from('order_items')
+        .insert(orderItemsInsert);
+
+      if (oiError) throw oiError;
+
+      // Update offer status if all items accepted (optional logic, for now mark as accepted)
+      // Check if all items of the demand are now in an order
+      const demand = demands.find(d => d.id === targetDemandId);
+      const allItemsCount = demand?.items?.length || 0;
+
+      // Calculate how many items are already in other orders for this demand
+      const existingOrdersForDemand = orders.filter(ord => ord.demandId === targetDemandId);
+      const alreadyOrderedItemDescriptions = new Set();
+      existingOrdersForDemand.forEach(ord => ord.items?.forEach(item => alreadyOrderedItemDescriptions.add(item.description)));
+      itemsToOrder.forEach(item => alreadyOrderedItemDescriptions.add(item.description));
+
+      const isFullyAccepted = alreadyOrderedItemDescriptions.size >= allItemsCount;
+
+      if (isFullyAccepted) {
+        await supabase.from('offers').update({ status: 'aceita' }).eq('id', offerId);
+        await supabase.from('offers').update({ status: 'rejeitada' }).eq('demand_id', targetDemandId).neq('id', offerId).eq('status', 'enviada');
+        await supabase.from('demands').update({ status: 'fechado' }).eq('id', targetDemandId);
+      }
 
       const newOrder: Order = {
         id: orderData.id,
@@ -354,22 +400,25 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         finalPrice: orderData.final_price,
         status: 'ativo',
         createdAt: orderData.created_at,
-        orderNumber: orderData.order_number
+        orderNumber: orderData.order_number,
+        items: itemsToOrder
       };
 
       // Update local state
       setOrders(prev => [newOrder, ...prev]);
 
-      setOffers(prevOffers => prevOffers.map(o => {
-        if (o.id === offerId) return { ...o, status: 'accepted' };
-        if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
-        return o;
-      }));
+      if (isFullyAccepted) {
+        setOffers(prevOffers => prevOffers.map(o => {
+          if (o.id === offerId) return { ...o, status: 'accepted' };
+          if (o.demandId === targetDemandId && o.status === 'pending') return { ...o, status: 'rejected' };
+          return o;
+        }));
 
-      setDemands(prevDemands => prevDemands.map(d => {
-        if (d.id === targetDemandId) return { ...d, status: DemandStatus.FECHADO };
-        return d;
-      }));
+        setDemands(prevDemands => prevDemands.map(d => {
+          if (d.id === targetDemandId) return { ...d, status: DemandStatus.FECHADO };
+          return d;
+        }));
+      }
 
     } catch (error) {
       console.error('Error accepting offer:', error);

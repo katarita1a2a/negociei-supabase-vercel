@@ -96,6 +96,7 @@ export interface Order {
   status: 'ativo' | 'concluido' | 'cancelado';
   createdAt: string;
   orderNumber: number;
+  items?: DemandItem[];
 }
 
 export interface DemandFilters {

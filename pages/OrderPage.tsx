@@ -28,7 +28,13 @@ const OrderPage: React.FC = () => {
     : acceptedOffer.id.substring(acceptedOffer.id.length - 6);
 
   const orderId = `ORD-${displayOrderNumber}`;
-  const itemsSubtotal = (acceptedOffer.items || []).reduce((acc, item) => acc + ((item.unitPrice || 0) * item.quantity), 0);
+
+  const itemsSubtotal = useMemo(() => {
+    const items = orderRecord?.items || acceptedOffer.items || [];
+    return items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+  }, [orderRecord, acceptedOffer]);
+
+  const finalOrderPrice = orderRecord?.finalPrice || acceptedOffer.value;
 
   return (
     <Layout showSidebar={false}>
@@ -68,7 +74,7 @@ const OrderPage: React.FC = () => {
             <table className="w-full border-collapse">
               <thead><tr className="bg-slate-50 border-b-2 border-slate-100"><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-left">DESCRIÇÃO DOS ITENS</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-center">QTD</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-right">UNITÁRIO</th><th className="py-5 px-6 text-[10px] font-black uppercase text-slate-400 text-right">TOTAL</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
-                {acceptedOffer.items?.map(item => (
+                {(orderRecord?.items || acceptedOffer.items || []).map(item => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors"><td className="py-5 px-6 font-bold text-slate-800 text-sm">{item.description}</td><td className="py-5 px-6 text-center font-black text-slate-900 text-sm">{item.quantity}</td><td className="py-5 px-6 text-right text-slate-500 text-sm">R$ {(item.unitPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td className="py-5 px-6 text-right font-black text-slate-900 text-sm">R$ {((item.unitPrice || 0) * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
                 ))}
               </tbody>
@@ -79,7 +85,7 @@ const OrderPage: React.FC = () => {
               <div className="flex justify-between w-full md:w-1/3 text-xs font-bold text-slate-400 uppercase"><span>FRETE / ENTREGA:</span><span className="text-slate-900">R$ {acceptedOffer.shippingCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
               <div className="flex justify-between items-center w-full md:w-1/2 mt-6 p-6 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-200">
                 <span className="text-xs font-black uppercase tracking-widest opacity-60">TOTAL LÍQUIDO DO PEDIDO</span>
-                <span className="text-4xl font-black text-primary-green tracking-tighter">R$ {acceptedOffer.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span className="text-4xl font-black text-primary-green tracking-tighter">R$ {finalOrderPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
