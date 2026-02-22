@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
-import { Demand, DemandFilters, Offer, DemandStatus, DemandItem } from '../types';
+import { Demand, DemandFilters, Offer, DemandStatus, DemandItem, Order } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -79,7 +79,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
             quantity: item.quantity,
             unitPrice: item.desired_unit_price,
             totalPrice: item.total_price
-          }))
+          })),
+          images: d.images || []
         }));
 
         setDemands(transformedDemands);
@@ -181,7 +182,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           need_date: demand.deadline.split('/').reverse().join('-'),
           estimated_price: demand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
           status: 'aberto',
-          user_id: user?.id
+          user_id: user?.id,
+          images: demand.images || []
         })
         .select()
         .single();
@@ -234,6 +236,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           location: updatedDemand.location,
           need_date: updatedDemand.deadline.split('/').reverse().join('-'),
           estimated_price: updatedDemand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
+          images: updatedDemand.images || []
         })
         .eq('id', updatedDemand.id);
 
