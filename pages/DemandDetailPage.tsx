@@ -249,7 +249,7 @@ const DemandDetailPage: React.FC = () => {
             <aside className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
               <div className="flex items-center gap-4 pb-4 border-b border-slate-50">
                 <div className="size-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl">
-                  {demand.ownerId[0].toUpperCase()}
+                  {(demand.ownerId?.[0] || 'U').toUpperCase()}
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</p>

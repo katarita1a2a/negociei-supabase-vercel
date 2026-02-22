@@ -509,7 +509,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           id: `order-${ord.id}`,
           type: 'order_accepted',
           title: 'Venda Confirmada!',
-          message: `O comprador aceitou sua oferta! Pedido #${ord.orderNumber?.toString().padStart(4, '0')}`,
+          message: `O comprador aceitou sua oferta! Pedido #${(ord.orderNumber || 0).toString().padStart(4, '0')}`,
           link: `/pedido/${ord.id}`,
           createdAt: ord.createdAt,
           read: new Date(ord.createdAt).getTime() <= lastReadTimestamp
