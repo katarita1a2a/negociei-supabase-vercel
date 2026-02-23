@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 const OrderPage: React.FC = () => {
   const { user } = useAuth();
   const { id, orderId } = useParams();
-  const { demands, offers, orders } = useDemands();
+  const { demands, offers, orders, isLoading } = useDemands();
 
   const { demand, acceptedOffer, orderRecord, specificOffer } = useMemo(() => {
     // Se temos orderId direto na URL
@@ -36,6 +36,17 @@ const OrderPage: React.FC = () => {
   const handlePrint = () => window.print();
 
   const currentOffer = specificOffer || acceptedOffer;
+
+  if (isLoading) {
+    return (
+      <Layout showSidebar={false}>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Carregando pedido...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!demand || !currentOffer || !orderRecord) {
     return (

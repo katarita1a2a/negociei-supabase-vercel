@@ -12,9 +12,9 @@ const DemandDetailPage: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { demands, addOffer, offers } = useDemands();
+  const { demands, addOffer, offers, isLoading } = useDemands();
 
-  const demand = demands.find(d => d.id === id);
+  const demand = demands.find(d => d.id?.toString() === id);
   const [offerMessage, setOfferMessage] = useState('');
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [deadlineDays, setDeadlineDays] = useState<number>(5);
@@ -42,7 +42,18 @@ const DemandDetailPage: React.FC = () => {
     }
   }, [demand]);
 
-  if (!demand) return <Layout showSidebar={false}><div className="py-20 text-center font-bold">Demanda não encontrada</div></Layout>;
+  if (isLoading) {
+    return (
+      <Layout showSidebar={false}>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Carregando detalhes...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!demand) return <Layout showSidebar={false}><div className="py-20 text-center font-bold text-slate-900 text-xl">Demanda não encontrada</div></Layout>;
 
   const isOwner = demand.ownerId === user?.id;
   const isSeller = user?.user_metadata?.role === UserRole.SELLER || user?.user_metadata?.role === UserRole.BOTH;
@@ -151,7 +162,7 @@ const DemandDetailPage: React.FC = () => {
             </div>
 
             <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-tight max-w-4xl">
-              {demand.title}
+              {String(demand.title || 'Sem título')}
             </h1>
 
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3 pt-2">
