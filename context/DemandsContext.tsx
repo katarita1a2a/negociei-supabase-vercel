@@ -60,8 +60,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         // Transform database data to frontend Demand type
         const transformedDemands: Demand[] = (demandsData || []).map(d => ({
-          id: d.id,
-          title: d.title,
+          id: d.id.toString(),
+          title: d.title || 'Sem título',
           description: d.description || '',
           category: d.category || '',
           location: d.location || '',
@@ -145,9 +145,9 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (ordersError) throw ordersError;
 
         const transformedOrders: Order[] = (ordersData || []).map(o => ({
-          id: o.id,
-          demandId: o.demand_id,
-          offerId: o.offer_id,
+          id: o.id.toString(),
+          demandId: o.demand_id.toString(),
+          offerId: o.offer_id.toString(),
           buyerId: o.buyer_id,
           sellerId: o.seller_id,
           finalPrice: o.final_price,
@@ -155,7 +155,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           createdAt: o.created_at,
           orderNumber: o.order_number,
           items: (o.order_items || []).map((oi: any) => ({
-            id: oi.offer_item_id, // Map correctly to the offer item ID for cross-reference
+            id: oi.offer_item_id?.toString(), // Map correctly to the offer item ID for cross-reference
             description: oi.description,
             unit: oi.unit,
             quantity: oi.quantity,
@@ -522,13 +522,18 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const filteredDemands = useMemo(() => {
     return demands.filter((demand) => {
-      if (filters.search && !demand.title.toLowerCase().includes(filters.search.toLowerCase()) && !demand.id.toLowerCase().includes(filters.search.toLowerCase())) {
+      const searchLower = filters.search.toLowerCase();
+      const titleLower = (demand.title || '').toLowerCase();
+      const idLower = (demand.id || '').toString().toLowerCase();
+      const locationLower = (demand.location || '').toLowerCase();
+
+      if (filters.search && !titleLower.includes(searchLower) && !idLower.includes(searchLower)) {
         return false;
       }
-      if (filters.state && !demand.location.includes(filters.state)) {
+      if (filters.state && !locationLower.includes(filters.state.toLowerCase())) {
         return false;
       }
-      if (filters.city && !demand.location.toLowerCase().includes(filters.city.toLowerCase())) {
+      if (filters.city && !locationLower.includes(filters.city.toLowerCase())) {
         return false;
       }
       if (filters.categories.length > 0 && !filters.categories.includes(demand.category)) {
