@@ -55,6 +55,27 @@ const DemandOffersPage: React.FC = () => {
     return { diff, percent, refBudget };
   }, [demand, demandOffers, minPrice]);
 
+  const { purchasedCount, totalCount } = useMemo(() => {
+    const demandOrders = orders.filter(o => o.demandId === id);
+    const purchasedNames = new Set();
+    demandOrders.forEach(ord => ord.items?.forEach(i => purchasedNames.add(i.description)));
+
+    return {
+      purchasedCount: purchasedNames.size,
+      totalCount: demand?.items?.length || 0
+    };
+  }, [orders, id, demand]);
+
+  const globalTotal = useMemo(() => {
+    let total = 0;
+    Object.entries(selectionMap).forEach(([itemId, offerId]) => {
+      const offer = offers.find(o => o.id === offerId);
+      const item = offer?.items?.find(i => i.id === itemId);
+      if (item) total += item.totalPrice;
+    });
+    return total;
+  }, [selectionMap, offers]);
+
   if (!demand) {
     return (
       <Layout>
@@ -79,27 +100,6 @@ const DemandOffersPage: React.FC = () => {
       </Layout>
     );
   }
-
-  const { purchasedCount, totalCount } = useMemo(() => {
-    const demandOrders = orders.filter(o => o.demandId === id);
-    const purchasedNames = new Set();
-    demandOrders.forEach(ord => ord.items?.forEach(i => purchasedNames.add(i.description)));
-
-    return {
-      purchasedCount: purchasedNames.size,
-      totalCount: demand?.items?.length || 0
-    };
-  }, [orders, id, demand]);
-
-  const globalTotal = useMemo(() => {
-    let total = 0;
-    Object.entries(selectionMap).forEach(([itemId, offerId]) => {
-      const offer = offers.find(o => o.id === offerId);
-      const item = offer?.items?.find(i => i.id === itemId);
-      if (item) total += item.totalPrice;
-    });
-    return total;
-  }, [selectionMap, offers]);
 
   return (
     <Layout showSidebar={false}>

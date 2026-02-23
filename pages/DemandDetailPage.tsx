@@ -42,6 +42,15 @@ const DemandDetailPage: React.FC = () => {
     }
   }, [demand]);
 
+  const offerTotal = useMemo(() => {
+    if (!demand) return 0;
+    const itemsSum = (demand.items || []).reduce((acc, item) => {
+      const price = itemPrices[item.id] || 0;
+      return acc + (price * item.quantity);
+    }, 0);
+    return itemsSum + shippingCost;
+  }, [demand, itemPrices, shippingCost]);
+
   if (isLoading) {
     return (
       <Layout showSidebar={false}>
@@ -58,14 +67,6 @@ const DemandDetailPage: React.FC = () => {
   const isOwner = demand.ownerId === user?.id;
   const isSeller = user?.user_metadata?.role === UserRole.SELLER || user?.user_metadata?.role === UserRole.BOTH;
   const alreadyHasOffer = offers.some(o => o.demandId === demand.id && o.sellerId === user?.id);
-
-  const offerTotal = useMemo(() => {
-    const itemsSum = (demand.items || []).reduce((acc, item) => {
-      const price = itemPrices[item.id] || 0;
-      return acc + (price * item.quantity);
-    }, 0);
-    return itemsSum + shippingCost;
-  }, [demand.items, itemPrices, shippingCost]);
 
   const handleSendOffer = async () => {
     const newOffer: Offer = {

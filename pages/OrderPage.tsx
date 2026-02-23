@@ -37,6 +37,11 @@ const OrderPage: React.FC = () => {
 
   const currentOffer = specificOffer || acceptedOffer;
 
+  const itemsSubtotal = useMemo(() => {
+    const items = orderRecord?.items || currentOffer?.items || [];
+    return items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+  }, [orderRecord, currentOffer]);
+
   if (isLoading) {
     return (
       <Layout showSidebar={false}>
@@ -66,11 +71,6 @@ const OrderPage: React.FC = () => {
     : (id || orderId || '0000').substring(0, 6);
 
   const displayFullOrderId = `ORD-${displayOrderNumber}`;
-
-  const itemsSubtotal = useMemo(() => {
-    const items = orderRecord?.items || currentOffer.items || [];
-    return items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
-  }, [orderRecord, currentOffer]);
 
   const finalOrderPrice = orderRecord?.finalPrice || currentOffer.value;
 
