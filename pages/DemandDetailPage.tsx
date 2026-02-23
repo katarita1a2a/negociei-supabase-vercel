@@ -328,183 +328,207 @@ const DemandDetailPage: React.FC = () => {
         </div>
 
         {/* ÁREA DE OFERTA COMPACTA */}
-        {isSeller && !isOwner && (
-          <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-elegant overflow-hidden animate-in slide-in-from-bottom-4 duration-500 mt-4">
-            <div className="p-10 border-b border-slate-50 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="space-y-2 text-center md:text-left">
-                <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3 justify-center md:justify-start">
-                  <span className="material-symbols-outlined text-primary-green text-3xl fill-1">handshake</span>
-                  Sua Proposta Comercial Privada
-                </h3>
-                <p className="text-sm font-medium text-slate-500">O comprador receberá sua oferta em um canal exclusivo e seguro.</p>
+        {user ? (
+          isSeller && !isOwner && (
+            <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-elegant overflow-hidden animate-in slide-in-from-bottom-4 duration-500 mt-4">
+              <div className="p-10 border-b border-slate-50 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="space-y-2 text-center md:text-left">
+                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3 justify-center md:justify-start">
+                    <span className="material-symbols-outlined text-primary-green text-3xl fill-1">handshake</span>
+                    Sua Proposta Comercial Privada
+                  </h3>
+                  <p className="text-sm font-medium text-slate-500">O comprador receberá sua oferta em um canal exclusivo e seguro.</p>
+                </div>
+
+                <div className="flex flex-col items-center md:items-end">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Calculado</span>
+                  <h4 className="text-4xl font-black text-primary-green tracking-tighter leading-none">
+                    R$ {offerTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </h4>
+                </div>
               </div>
 
-              <div className="flex flex-col items-center md:items-end">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Calculado</span>
-                <h4 className="text-4xl font-black text-primary-green tracking-tighter leading-none">
-                  R$ {offerTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h4>
-              </div>
-            </div>
-
-            <div className="p-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
-              {/* Lado Esquerdo: Itens */}
-              <div className="lg:col-span-7 space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Preços Unitários por Item</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {demand.items?.map(item => (
-                    <div key={item.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4 group hover:border-primary/40 transition-all">
-                      <div className="flex-1">
-                        <p className="text-xs font-black text-slate-700 leading-tight">{item.description}</p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{item.quantity} {item.unit}</p>
+              <div className="p-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Lado Esquerdo: Itens */}
+                <div className="lg:col-span-7 space-y-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Preços Unitários por Item</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {demand.items?.map(item => (
+                      <div key={item.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4 group hover:border-primary/40 transition-all">
+                        <div className="flex-1">
+                          <p className="text-xs font-black text-slate-700 leading-tight">{item.description}</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{item.quantity} {item.unit}</p>
+                        </div>
+                        <div className="relative w-28">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black">R$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={itemPrices[item.id] || ''}
+                            onChange={(e) => setItemPrices(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                            className="w-full h-10 pl-8 pr-3 rounded-xl border-slate-200 bg-white focus:ring-primary font-black text-slate-900 text-sm transition-all text-right"
+                          />
+                        </div>
                       </div>
-                      <div className="relative w-28">
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lado Direito: Mensagem e Frete */}
+                <div className="lg:col-span-5 flex flex-col gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mensagem e Condições</label>
+                    <textarea
+                      value={offerMessage}
+                      onChange={(e) => setOfferMessage(e.target.value)}
+                      placeholder="Marcas, garantia, prazo de entrega..."
+                      className="w-full h-32 rounded-2xl border-slate-200 bg-slate-50 focus:ring-primary focus:bg-white p-4 text-sm text-slate-600 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Logística (Frete)</label>
+                      <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black">R$</span>
                         <input
                           type="number"
                           step="0.01"
-                          value={itemPrices[item.id] || ''}
-                          onChange={(e) => setItemPrices(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
-                          className="w-full h-10 pl-8 pr-3 rounded-xl border-slate-200 bg-white focus:ring-primary font-black text-slate-900 text-sm transition-all text-right"
+                          value={shippingCost}
+                          onChange={(e) => setShippingCost(Number(e.target.value))}
+                          className="w-full h-12 pl-8 pr-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-lg"
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Lado Direito: Mensagem e Frete */}
-              <div className="lg:col-span-5 flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mensagem e Condições</label>
-                  <textarea
-                    value={offerMessage}
-                    onChange={(e) => setOfferMessage(e.target.value)}
-                    placeholder="Marcas, garantia, prazo de entrega..."
-                    className="w-full h-32 rounded-2xl border-slate-200 bg-slate-50 focus:ring-primary focus:bg-white p-4 text-sm text-slate-600 transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Logística (Frete)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black">R$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={shippingCost}
-                        onChange={(e) => setShippingCost(Number(e.target.value))}
-                        className="w-full h-12 pl-8 pr-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-end">
-                    <button onClick={() => setShippingCost(0)} className={`h-12 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${shippingCost === 0 ? 'bg-primary-green text-slate-900 border-primary-green shadow-lg shadow-emerald-100' : 'bg-transparent text-slate-400 border-slate-100 hover:border-slate-200'}`}>
-                      Frete Grátis
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Prazo (Dias)</label>
-                    <input
-                      type="number"
-                      value={deadlineDays}
-                      onChange={(e) => setDeadlineDays(Number(e.target.value))}
-                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Garantia (Meses)</label>
-                    <input
-                      type="number"
-                      value={warrantyMonths}
-                      onChange={(e) => setWarrantyMonths(Number(e.target.value))}
-                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Pagamento</label>
-                    <select
-                      value={paymentTerms}
-                      onChange={(e) => setPaymentTerms(e.target.value)}
-                      className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
-                    >
-                      <option value="À vista">À vista</option>
-                      <option value="50% antecipado / 50% entrega">50/50</option>
-                      <option value="30 dias">30 dias</option>
-                      <option value="Cartão de Crédito">Cartão de Crédito</option>
-                      <option value="Boleto Bancário">Boleto Bancário</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Anexo PDF (Opcional)</label>
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        ref={pdfInputRef}
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            if (file.size > 5 * 1024 * 1024) {
-                              alert("O arquivo PDF deve ter no máximo 5MB.");
-                              return;
-                            }
-                            setPdfName(file.name);
-                            const reader = new FileReader();
-                            reader.onloadend = () => setPdfBase64(reader.result as string);
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => pdfInputRef.current?.click()}
-                        className={`w-full h-12 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${pdfName ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400 hover:border-primary hover:text-primary'}`}
-                      >
-                        <span className="material-symbols-outlined text-[20px]">{pdfName ? 'check_circle' : 'picture_as_pdf'}</span>
-                        <span className="text-xs font-bold truncate max-w-[120px]">{pdfName || 'Anexar PDF da Proposta'}</span>
+                    <div className="flex flex-col justify-end">
+                      <button onClick={() => setShippingCost(0)} className={`h-12 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${shippingCost === 0 ? 'bg-primary-green text-slate-900 border-primary-green shadow-lg shadow-emerald-100' : 'bg-transparent text-slate-400 border-slate-100 hover:border-slate-200'}`}>
+                        Frete Grátis
                       </button>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Proposta Válida até</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Prazo (Dias)</label>
                       <input
-                        type="date"
-                        value={validUntil}
-                        onChange={(e) => setValidUntil(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                        type="number"
+                        value={deadlineDays}
+                        onChange={(e) => setDeadlineDays(Number(e.target.value))}
+                        className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Garantia (Meses)</label>
+                      <input
+                        type="number"
+                        value={warrantyMonths}
+                        onChange={(e) => setWarrantyMonths(Number(e.target.value))}
+                        className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900"
                       />
                     </div>
                   </div>
-                </div>
 
-                <button
-                  disabled={alreadyHasOffer || offerTotal === 0 || isSubmitting}
-                  onClick={handleSendOffer}
-                  className="w-full h-16 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
-                >
-                  {isSubmitting ? (
-                    <>
-                      ENVIANDO...
-                      <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </>
-                  ) : alreadyHasOffer ? (
-                    'OFERTA JÁ ENVIADA'
-                  ) : (
-                    <>
-                      ENVIAR PROPOSTA AGORA
-                      <span className="material-symbols-outlined text-2xl">send</span>
-                    </>
-                  )}
-                </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Pagamento</label>
+                      <select
+                        value={paymentTerms}
+                        onChange={(e) => setPaymentTerms(e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                      >
+                        <option value="À vista">À vista</option>
+                        <option value="50% antecipado / 50% entrega">50/50</option>
+                        <option value="30 dias">30 dias</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="Boleto Bancário">Boleto Bancário</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Anexo PDF (Opcional)</label>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          ref={pdfInputRef}
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                alert("O arquivo PDF deve ter no máximo 5MB.");
+                                return;
+                              }
+                              setPdfName(file.name);
+                              const reader = new FileReader();
+                              reader.onloadend = () => setPdfBase64(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => pdfInputRef.current?.click()}
+                          className={`w-full h-12 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${pdfName ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400 hover:border-primary hover:text-primary'}`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">{pdfName ? 'check_circle' : 'picture_as_pdf'}</span>
+                          <span className="text-xs font-bold truncate max-w-[120px]">{pdfName || 'Anexar PDF da Proposta'}</span>
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Proposta Válida até</label>
+                        <input
+                          type="date"
+                          value={validUntil}
+                          onChange={(e) => setValidUntil(e.target.value)}
+                          className="w-full h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={alreadyHasOffer || offerTotal === 0 || isSubmitting}
+                    onClick={handleSendOffer}
+                    className="w-full h-16 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        ENVIANDO...
+                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </>
+                    ) : alreadyHasOffer ? (
+                      'OFERTA JÁ ENVIADA'
+                    ) : (
+                      <>
+                        ENVIAR PROPOSTA AGORA
+                        <span className="material-symbols-outlined text-2xl">send</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
+            </section>
+          )
+        ) : (
+          <section className="bg-slate-900 rounded-[2.5rem] p-10 mt-4 overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] group-hover:bg-primary/20 transition-all duration-700"></div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="space-y-4 text-center md:text-left">
+                <div className="flex items-center gap-3 justify-center md:justify-start">
+                  <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-3xl fill-1">lock</span>
+                  </div>
+                  <h3 className="text-2xl font-black text-white tracking-tight">Interessado nesta demanda?</h3>
+                </div>
+                <p className="text-slate-400 font-medium max-w-lg">Faça login ou crie sua conta agora mesmo para enviar uma proposta comercial e fechar negócio.</p>
+              </div>
+              <Link
+                to="/login"
+                className="w-full md:w-auto px-10 py-5 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark transition-all flex items-center justify-center gap-3 shadow-2xl shadow-primary/40 text-sm uppercase tracking-widest transform hover:scale-[1.05]"
+              >
+                Entrar e Enviar Proposta
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </Link>
             </div>
           </section>
         )}

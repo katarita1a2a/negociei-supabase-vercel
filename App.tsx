@@ -34,12 +34,15 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
 
+        {/* Public Routes */}
+        <Route path="/" element={<FeedPage />} />
+        <Route path="/demanda/:id" element={<DemandDetailPage />} />
+
         {/* Protected Routes */}
-        <Route path="/" element={session ? <FeedPage /> : <Navigate to="/login" replace />} />
         <Route path="/dashboard" element={session ? <DashboardPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/nova" element={session ? <NewDemandPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/editar/:id" element={session ? <NewDemandPage /> : <Navigate to="/login" replace />} />
-        <Route path="/demanda/:id" element={session ? <DemandDetailPage /> : <Navigate to="/login" replace />} />
+        {/* Note: /demanda/:id is now public above */}
         <Route path="/demanda/:id/ofertas" element={session ? <DemandOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/:id/pedido" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
         <Route path="/pedido/:orderId" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
