@@ -125,6 +125,38 @@ const ProposalsTable: React.FC<ProposalsTableProps> = ({
                             </tr>
                         ))}
 
+                        {/* Linha de Condições Logísticas e Pagamento */}
+                        <tr className="bg-slate-50 border-t border-slate-200">
+                            <td className="matrix-col-item">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Logística e Pagamento</span>
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase">Prazos e Condições</span>
+                                </div>
+                            </td>
+                            {offers.map(offer => (
+                                <td key={`logistics-${offer.id}`} className="px-6 py-4">
+                                    <div className="flex flex-col gap-2">
+                                        {/* Pagamento */}
+                                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-primary tracking-widest whitespace-nowrap bg-primary/5 px-2 py-0.5 rounded-md self-start">
+                                            <span className="material-symbols-outlined text-[14px]">payments</span>
+                                            {offer.paymentTerms || 'Consulte'}
+                                        </div>
+                                        {/* Frete e Prazo */}
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-slate-500 tracking-widest whitespace-nowrap">
+                                                <span className="material-symbols-outlined text-[14px] text-primary/70">local_shipping</span>
+                                                {offer.shippingCost === 0 ? <span className="text-emerald-600">Grátis</span> : `R$ ${offer.shippingCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                            </div>
+                                            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-slate-500 tracking-widest whitespace-nowrap">
+                                                <span className="material-symbols-outlined text-[14px] text-primary/70">schedule</span>
+                                                {offer.deadlineDays} {offer.deadlineDays === 1 ? 'dia' : 'dias'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            ))}
+                        </tr>
+
                         {/* Linha de Subtotais Selecionados */}
                         <tr className="bg-primary/[0.02] border-t-2 border-primary/10">
                             <td className="matrix-col-item">
