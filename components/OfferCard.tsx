@@ -132,8 +132,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
 
   return (
     <div className={`
-      flex flex-col bg-white rounded-[2.5rem] border-2 transition-all duration-300 overflow-hidden relative group
-      ${isBest && offer.status === 'pending' ? 'border-primary shadow-elegant scale-[1.01] z-10' : 'border-slate-100 hover:border-slate-200 shadow-soft'}
+      OfferCard flex flex-col bg-white rounded-[2.5rem] border-2 transition-all duration-300 overflow-hidden relative group
+      ${isBest && offer.status === 'pending' ? 'border-primary shadow-elegant z-10' : 'border-slate-100 hover:border-slate-200 shadow-soft'}
       ${offer.status === 'accepted' ? 'border-emerald-500' : ''}
     `}>
       {/* Badge de Destaque */}
@@ -143,11 +143,11 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
         </div>
       )}
 
-      <div className="p-8 flex flex-col h-full gap-6">
+      <div className="p-5 flex flex-col h-full gap-4">
         {/* Header do Fornecedor */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-2xl shadow-lg transform group-hover:rotate-3 transition-transform">
+            <div className="size-9 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-lg shadow-lg transition-transform group-hover:scale-105">
               {offer.sellerName[0]}
             </div>
             <div>
@@ -157,6 +157,15 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                   <span className="material-symbols-outlined text-primary text-sm fill-1" title="Verificado">verified</span>
                 )}
               </div>
+
+              {/* Dados da Empresa e CNPJ */}
+              {(offer.sellerCompany || offer.sellerCnpj) && (
+                <div className="flex flex-col mt-0.5">
+                  {offer.sellerCompany && <p className="text-[10px] font-bold text-slate-500">{offer.sellerCompany}</p>}
+                  {offer.sellerCnpj && <p className="text-[9px] font-medium text-slate-400">CNPJ: {offer.sellerCnpj}</p>}
+                </div>
+              )}
+
               <div className="flex items-center gap-1.5 text-amber-500 text-[10px] font-black mt-1 uppercase tracking-widest">
                 <span className="material-symbols-outlined text-[14px] fill-1">star</span>
                 {offer.sellerRating.toFixed(1)}
@@ -166,67 +175,55 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
           </div>
         </div>
 
-        {/* Bloco de Preço Principal */}
-        <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-3">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              {selectedItemIds.length === offer.items?.length ? 'Total da Proposta' : 'Total dos Itens Selecionados'}
-            </p>
-            {savings && savings > 0 && selectedItemIds.length === offer.items?.length && (
-              <div className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-0.5 rounded uppercase">
-                Economia: R$ {savings.toLocaleString('pt-BR')}
-              </div>
-            )}
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl md:text-5xl font-black tracking-tighter ${offer.status === 'accepted' ? 'text-emerald-600' : 'text-slate-900'}`}>
-              R$ {(selectedItemIds.length === offer.items?.length ? offer.value : selectedTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t border-slate-200/50 mt-2">
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-              <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">local_shipping</span>
-              {offer.shippingCost === 0 ? <span className="text-emerald-600">Frete Grátis</span> : `R$ ${offer.shippingCost.toLocaleString('pt-BR')}`}
+        {/* Bloco de Preço Principal - 2 Colunas para ser mais Quadrado */}
+        <div className="bg-slate-50 p-4 rounded-[1.2rem] border border-slate-100 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Valor Selecionado */}
+            <div className="flex flex-col min-w-0">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight whitespace-nowrap overflow-hidden text-ellipsis">Itens marcados</p>
+              <span className={`text-2xl font-black tracking-tighter leading-tight whitespace-nowrap ${offer.status === 'accepted' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                R$ {selectedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-              <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">schedule</span>
-              {offer.deadlineDays} dias úteis
+
+            {/* Valor Total da Oferta */}
+            <div className="flex flex-col text-right min-w-0">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight whitespace-nowrap overflow-hidden text-ellipsis">Total Proposta</span>
+              <span className="text-lg font-black text-slate-700 leading-tight whitespace-nowrap">
+                R$ {offer.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
             </div>
-            {offer.warrantyMonths > 0 && (
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                <span className="material-symbols-outlined text-[18px] text-primary text-opacity-70">verified_user</span>
-                {offer.warrantyMonths} meses de garantia
-              </div>
-            )}
           </div>
 
-          {(offer.paymentTerms || offer.validUntil) && (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 mt-1 border-t border-slate-200/30">
-              {offer.paymentTerms && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pagamento</span>
-                  <span className="text-[10px] font-bold text-slate-600 uppercase">{offer.paymentTerms}</span>
-                </div>
-              )}
-              {offer.validUntil && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Válida até</span>
-                  <span className="text-[10px] font-bold text-slate-600">{new Date(offer.validUntil).toLocaleDateString('pt-BR')}</span>
-                </div>
-              )}
+          <div className="h-px bg-slate-200/50"></div>
+
+          <div className="flex flex-wrap items-center justify-between gap-y-2 pt-0.5">
+            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-slate-500 tracking-widest whitespace-nowrap shrink-0">
+              <span className="material-symbols-outlined text-[16px] text-primary/70 shrink-0">local_shipping</span>
+              {offer.shippingCost === 0 ? <span className="text-emerald-600">Grátis</span> : `R$ ${offer.shippingCost}`}
             </div>
-          )}
+            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-slate-500 tracking-widest whitespace-nowrap shrink-0">
+              <span className="material-symbols-outlined text-[16px] text-primary/70 shrink-0">schedule</span>
+              {offer.deadlineDays} {offer.deadlineDays === 1 ? 'dia' : 'dias'}
+            </div>
+            {offer.paymentTerms && (
+              <div className="flex items-center gap-1 text-[9px] font-black uppercase text-primary tracking-widest whitespace-nowrap shrink-0 bg-primary/5 px-2 py-0.5 rounded-md">
+                <span className="material-symbols-outlined text-[14px] shrink-0">payments</span>
+                {offer.paymentTerms.split(' ')[0]}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Resumo da Mensagem */}
         <div className="relative">
-          <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2 px-1">
+          <p className="text-[11px] text-slate-500 italic leading-tight line-clamp-1 px-1">
             "{offer.message || 'Sem mensagem adicional.'}"
           </p>
         </div>
 
-        {/* Itens e Valores Unitários (Sempre visível ou com controle) */}
-        <div className="space-y-4 pt-4 border-t border-slate-100">
+        {/* Itens e Valores Unitários */}
+        <div className="space-y-3 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between px-1">
             <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <span className="material-symbols-outlined text-[16px]">list_alt</span>
@@ -241,8 +238,23 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
-            {offer.items?.slice(0, isExpanded ? 100 : 2).map((item) => {
+          <div className={`flex flex-col gap-3 ${isExpanded ? '' : 'print:flex'}`}>
+            {offer.items?.map((item, idx) => {
+              // Only slice if not printing
+              if (!isExpanded && idx >= 2) {
+                return (
+                  <div key={item.id} className="hidden print:flex items-center justify-between p-3 rounded-xl border border-slate-50/50 bg-slate-50/50">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-slate-900 leading-tight">{item.description}</span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.quantity} {item.unit}</span>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-xs font-black text-slate-900">R$ {item.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">TOTAL: R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                );
+              }
               const isAlreadyOrdered = purchasedItemIds.has(item.id) || purchasedItemDescriptions.has(item.description.trim().toLowerCase());
               const selectedByOfferId = selectionMap[item.id];
               const isSelected = selectedByOfferId === offer.id;
@@ -266,7 +278,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                           ? 'bg-slate-50 border-slate-100 opacity-60'
                           : 'bg-slate-50/50 border-slate-100/50'
                     }
-                  hover:bg-slate-50 transition-colors relative
+                  hover:bg-slate-50 relative
                 `}
                 >
                   <div className="flex items-center gap-3">
@@ -303,15 +315,6 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                       </span>
                     </div>
                   )}
-
-                  {isAlreadyOrdered && !selectedItemIds.includes(item.id) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100/60 backdrop-blur-[1px] rounded-xl pointer-events-none">
-                      <span className="bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[10px]">check_circle</span>
-                        Item Comprado
-                      </span>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -322,80 +325,52 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
         </div>
       </div>
 
-      {/* Rodapé de Ações */}
-      <div className="mt-auto pt-4 relative">
+      {/* Ações e Status */}
+      <div className="p-5 pt-0">
         {successOrderId ? (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
-              <span className="material-symbols-outlined text-lg">check_circle</span>
-              Itens aceitos com sucesso!
+              <span className="material-symbols-outlined text-base">check_circle</span> Itens aceitos!
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setSuccessOrderId(null)}
-                className="h-10 rounded-xl bg-white border border-emerald-200 text-emerald-600 font-black text-[9px] uppercase tracking-widest hover:bg-emerald-100/50 transition-all"
-              >
-                Continuar
-              </button>
-              <Link
-                to={`/pedido/${successOrderId}`}
-                className="h-10 rounded-xl bg-emerald-600 text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-              >
-                Ver Pedido
-                <span className="material-symbols-outlined text-sm">description</span>
-              </Link>
-            </div>
+            <Link to={`/pedido/${successOrderId}`} className="h-11 rounded-lg bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm">
+              VER PEDIDO
+            </Link>
           </div>
         ) : (offer.status === 'accepted' || hasExistingOrder) ? (
           <div className="flex flex-col gap-3">
+            <Link to={(() => {
+              const ord = orders.find(o => o.offerId === offer.id);
+              return ord ? `/pedido/${ord.id}` : `/demanda/${offer.demandId}/pedido`;
+            })()}
+              className="h-14 px-6 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 text-[11px] uppercase tracking-widest shadow-lg"
+            >
+              VER PEDIDO
+            </Link>
             {offer.pdfUrl && (
-              <button
-                onClick={handleViewPdf}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-primary text-primary font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 transition-all bg-white mb-2"
-              >
-                <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-                Ver Anexo da Proposta (PDF)
+              <button onClick={handleViewPdf} className="text-[10px] font-black text-primary uppercase hover:underline flex items-center justify-center gap-1">
+                <span className="material-symbols-outlined text-sm">picture_as_pdf</span> PDF ANEXO
               </button>
             )}
-            <button
-              disabled={selectedItemIds.length === 0}
-              onClick={handleAccept}
-              className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              Comprar mais itens
-            </button>
-            <Link
-              to={(() => {
-                const ord = orders.find(o => o.offerId === offer.id);
-                return ord ? `/pedido/${ord.id}` : `/demanda/${offer.demandId}/pedido`;
-              })()}
-              className="h-14 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all"
-            >
-              <span className="material-symbols-outlined text-[20px]">description</span> VISUALIZAR PEDIDO
-            </Link>
           </div>
         ) : offer.status === 'rejected' ? (
-          <div className="h-12 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] flex items-center justify-center uppercase tracking-widest italic border border-slate-200 gap-2 opacity-60">
-            <span className="material-symbols-outlined text-[18px]">cancel</span>
-            Proposta Recusada
+          <div className="h-14 px-6 rounded-xl bg-slate-50 text-slate-300 font-black text-[11px] flex items-center justify-center uppercase tracking-widest italic border border-slate-100 gap-2">
+            REJEITADA
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={handleReject}
-              className="h-12 rounded-xl border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-              Rejeitar
-            </button>
-            <button
-              onClick={handleAccept}
-              className="h-12 rounded-xl bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">check</span>
-              {selectedItemIds.length === offer.items?.length ? 'Aceitar Proposta' : `Aceitar ${selectedItemIds.length} itens`}
-            </button>
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleReject} className="h-10 rounded-lg border border-slate-200 text-slate-400 font-black text-[9px] uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all">
+                REJEITAR
+              </button>
+              <button onClick={handleAccept} className="h-10 rounded-lg bg-primary text-white font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20">
+                ACEITAR
+              </button>
+            </div>
+            {offer.pdfUrl && (
+              <button onClick={handleViewPdf} className="text-[10px] font-black text-primary uppercase hover:underline flex items-center justify-center gap-1">
+                <span className="material-symbols-outlined text-sm">picture_as_pdf</span> VER PDF DA PROPOSTA
+              </button>
+            )}
           </div>
         )}
       </div>

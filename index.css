@@ -1,0 +1,103 @@
+@media print {
+
+  /* Reset Geral para Impressão Horizontal */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  /* Reset total do documento */
+  html,
+  body,
+  #root,
+  .App {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Esconder elementos de interface de forma seletiva */
+  nav,
+  header,
+  footer,
+  aside,
+  .print\:hidden,
+  button,
+  .no-print,
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Manter apenas o necessário visível */
+  main,
+  .container,
+  #proposals-container,
+  #proposals-container * {
+    visibility: visible !important;
+  }
+
+  /* Layout de Grid para Impressão (3 Colunas Lado a Lado) */
+  #proposals-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+    width: 100% !important;
+    margin-top: 5mm !important;
+    padding: 0 !important;
+  }
+
+  .proposal-item {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    width: 100% !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+  }
+
+  /* Ajustes de densidade de fonte para impressão */
+  .OfferCard * {
+    font-size: 8pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .OfferCard h1,
+  .OfferCard h2,
+  .OfferCard h3,
+  .OfferCard span {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+  }
+
+  /* Forçar cores de fundo e bordas */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Utilitário para esconder scrollbar sem perder funcionalidade */
+.no-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  /* Mostra uma barra bem sutil em vez de esconder totalmente */
+}
+
+.no-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: auto;
+  scrollbar-width: thin;
+}

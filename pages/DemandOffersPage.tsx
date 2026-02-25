@@ -103,7 +103,7 @@ const DemandOffersPage: React.FC = () => {
 
   return (
     <Layout showSidebar={false}>
-      <div className="max-w-[1300px] mx-auto flex flex-col gap-10 pb-20">
+      <div className="max-w-[1850px] mx-auto flex flex-col gap-10 pb-20 px-4 md:px-6">
 
         {/* Floating Global Total Bar */}
         {globalTotal > 0 && (
@@ -137,7 +137,7 @@ const DemandOffersPage: React.FC = () => {
             </div>
           </nav>
 
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-100">
             <div className="space-y-2">
               <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
                 {demand.title}
@@ -162,19 +162,45 @@ const DemandOffersPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            <div className="flex flex-col md:flex-row md:items-center gap-4 print:hidden">
+              <button
+                onClick={() => window.print()}
+                className="h-12 px-6 rounded-2xl border-2 border-slate-200 text-slate-600 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all hover:border-slate-300"
+              >
+                <span className="material-symbols-outlined text-[20px]">print</span>
+                Imprimir Cotação
+              </button>
+              <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-3">Ordenar por:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="h-8 pl-2 pr-8 rounded-lg bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                >
+                  <option value="price_asc">Menor Preço Total</option>
+                  <option value="price_desc">Maior Preço Total</option>
+                  <option value="rating_desc">Melhor Avaliação</option>
+                  <option value="date_desc">Mais Recentes</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
+        {/* Grid Principal de Conteúdo */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 items-start print:block">
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 items-start">
-
-          {/* COLUNA ESQUERDA: SUA ESPECIFICAÇÃO (REFERÊNCIA) */}
-          <aside className="xl:col-span-1 space-y-6 sticky top-24">
+          {/* Sidebar de Especificação - Esquerda */}
+          <div className="xl:col-span-3 print:hidden">
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-soft overflow-hidden">
               <div className="bg-slate-900 p-6 text-white">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] opacity-60 mb-1">Sua Especificação</h3>
                 <p className="text-lg font-bold tracking-tight">Referência de Compra</p>
               </div>
               <div className="p-6 space-y-6">
+                {/* Espaçador para alinhar itens da demanda com os itens ofertados nos cards (que têm header + preço) */}
+                <div className="hidden xl:block h-[100px]"></div>
+
                 <div className="space-y-4">
                   {demand.items?.map(item => (
                     <div key={item.id} className="pb-4 border-b border-slate-50 last:border-0 last:pb-0">
@@ -199,9 +225,9 @@ const DemandOffersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Metrica de Economia */}
+            {/* Métrica de Economia */}
             {savingsData && savingsData.diff > 0 && (
-              <div className="bg-emerald-600 rounded-[2rem] p-6 text-white shadow-lg shadow-emerald-100 space-y-3">
+              <div className="mt-8 bg-emerald-600 rounded-[2rem] p-6 text-white shadow-lg shadow-emerald-100 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined fill-1">trending_down</span>
                   <span className="text-[10px] font-black uppercase tracking-widest">Economia Detectada</span>
@@ -212,43 +238,40 @@ const DemandOffersPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </aside>
+          </div>
 
-          {/* COLUNA DIREITA: LISTA DE OFERTAS */}
-          <div className="xl:col-span-3 space-y-8">
-            <div className="flex flex-wrap items-center justify-between gap-6 border-b border-slate-200 pb-6">
-              <h2 className="text-xl font-black text-slate-900 flex items-center gap-3 tracking-tight uppercase">
-                Propostas Disponíveis
-                <span className="bg-primary text-white text-[10px] px-3 py-1 rounded-full font-black">
+          {/* Listagem de Propostas - Direita */}
+          <div className="xl:col-span-9 space-y-8 print:w-full print:block print:m-0 print:p-0">
+            <div className="border-b border-slate-200 pb-4">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                PROPOSTAS DISPONÍVEIS
+                <span className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-black border border-primary/20 print:hidden">
                   {demandOffers.length}
                 </span>
               </h2>
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordenar por:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="form-select h-10 pl-4 pr-10 py-0 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 focus:ring-primary cursor-pointer shadow-sm uppercase tracking-widest"
-                >
-                  <option value="menor">Menor Preço Total</option>
-                  <option value="maior">Maior Preço Total</option>
-                  <option value="recent">Mais recente</option>
-                </select>
-              </div>
             </div>
 
             {demandOffers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {demandOffers.map((offer) => (
-                  <OfferCard
-                    key={offer.id}
-                    offer={offer}
-                    isBest={offer.value === minPrice && offer.status === 'pending'}
-                    referenceBudget={savingsData?.refBudget}
-                    selectionMap={selectionMap}
-                    onToggleItem={toggleItemSelection}
-                  />
-                ))}
+              <div id="proposals-container" className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8 print:block">
+                {[...demandOffers]
+                  .sort((a, b) => {
+                    if (sortBy === 'price_asc') return a.value - b.value;
+                    if (sortBy === 'price_desc') return b.value - a.value;
+                    if (sortBy === 'rating_desc') return (b.sellerRating || 0) - (a.sellerRating || 0);
+                    if (sortBy === 'date_desc') return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+                    return 0;
+                  })
+                  .map((offer) => (
+                    <div key={offer.id} className="proposal-item min-w-0 w-full print:mb-4">
+                      <OfferCard
+                        offer={offer}
+                        isBest={offer.value === minPrice && offer.status === 'pending'}
+                        referenceBudget={savingsData?.refBudget}
+                        selectionMap={selectionMap}
+                        onToggleItem={toggleItemSelection}
+                      />
+                    </div>
+                  ))}
               </div>
             ) : (
               <div className="py-24 text-center flex flex-col items-center gap-8 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 shadow-inner">
