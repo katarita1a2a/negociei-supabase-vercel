@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import OfferCard from '../components/OfferCard';
+import ProposalsTable from '../components/ProposalsTable';
 import StatusBadge from '../components/StatusBadge';
 import { useDemands } from '../context/DemandsContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +11,9 @@ import { DemandStatus, Offer } from '../types';
 const DemandOffersPage: React.FC = () => {
   const { user } = useAuth();
   const { id } = useParams();
-  const { demands, offers, orders } = useDemands();
+  const { demands, offers, orders, acceptOffer, rejectOffer } = useDemands();
   const [sortBy, setSortBy] = useState<'menor' | 'maior' | 'recent'>('menor');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Mapeia ID do Item -> ID da Oferta (quem está fornecendo esse item no carrinho global)
   const [selectionMap, setSelectionMap] = useState<Record<string, string>>({});
@@ -164,6 +166,24 @@ const DemandOffersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center gap-4 print:hidden">
+              {/* Seletor de Visualização */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                  Cards
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">table_chart</span>
+                  Matriz
+                </button>
+              </div>
+
               <button
                 onClick={() => window.print()}
                 className="h-12 px-6 rounded-2xl border-2 border-slate-200 text-slate-600 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all hover:border-slate-300"
@@ -252,27 +272,42 @@ const DemandOffersPage: React.FC = () => {
             </div>
 
             {demandOffers.length > 0 ? (
-              <div id="proposals-container" className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8 print:block">
-                {[...demandOffers]
-                  .sort((a, b) => {
-                    if (sortBy === 'price_asc') return a.value - b.value;
-                    if (sortBy === 'price_desc') return b.value - a.value;
-                    if (sortBy === 'rating_desc') return (b.sellerRating || 0) - (a.sellerRating || 0);
-                    if (sortBy === 'date_desc') return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
-                    return 0;
-                  })
-                  .map((offer) => (
-                    <div key={offer.id} className="proposal-item min-w-0 w-full print:mb-4">
-                      <OfferCard
-                        offer={offer}
-                        isBest={offer.value === minPrice && offer.status === 'pending'}
-                        referenceBudget={savingsData?.refBudget}
-                        selectionMap={selectionMap}
-                        onToggleItem={toggleItemSelection}
-                      />
-                    </div>
-                  ))}
-              </div>
+              <>
+                {viewMode === 'grid' ? (
+                  <div id="proposals-container" className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8 print:block">
+                    {[...demandOffers]
+                      .sort((a, b) => {
+                        if (sortBy === 'price_asc') return a.value - b.value;
+                        if (sortBy === 'price_desc') return b.value - a.value;
+                        if (sortBy === 'rating_desc') return (b.sellerRating || 0) - (a.sellerRating || 0);
+                        if (sortBy === 'date_desc') return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+                        return 0;
+                      })
+                      .map((offer) => (
+                        <div key={offer.id} className="proposal-item min-w-0 w-full print:mb-4">
+                          <OfferCard
+                            offer={offer}
+                            isBest={offer.value === minPrice && offer.status === 'pending'}
+                            referenceBudget={savingsData?.refBudget}
+                            demandItems={demand.items || []}
+                            selectionMap={selectionMap}
+                            onToggleItem={toggleItemSelection}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <ProposalsTable
+                    demandItems={demand.items || []}
+                    offers={demandOffers}
+                    orders={orders}
+                    selectionMap={selectionMap}
+                    onToggleItem={toggleItemSelection}
+                    onAccept={(offerId, itemIds) => acceptOffer(offerId, itemIds)}
+                    onReject={(offerId) => rejectOffer(offerId)}
+                  />
+                )}
+              </>
             ) : (
               <div className="py-24 text-center flex flex-col items-center gap-8 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 shadow-inner">
                 <div className="size-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 animate-pulse">

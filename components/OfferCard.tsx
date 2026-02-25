@@ -8,41 +8,54 @@ interface OfferCardProps {
   offer: Offer;
   isBest?: boolean;
   referenceBudget?: number;
+  demandItems?: any[];
   selectionMap?: Record<string, string>;
   onToggleItem?: (itemId: string, offerId: string) => void;
 }
 
-const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, selectionMap = {}, onToggleItem }) => {
+const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, demandItems = [], selectionMap = {}, onToggleItem }) => {
   const { acceptOffer, rejectOffer, orders } = useDemands();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+
+  // Mapeamento extra para facilitar busca de DemandItemID por descrição
+  const demandItemByDescription = useMemo(() => {
+    const map: Record<string, string> = {};
+    demandItems.forEach(di => {
+      map[di.description.trim().toLowerCase()] = di.id;
+    });
+    return map;
+  }, [demandItems]);
 
   // Verifica se esta oferta específica já possui algum item em algum pedido
   const hasExistingOrder = useMemo(() => {
     return orders.some(ord => ord.offerId === offer.id);
   }, [orders, offer.id]);
 
-  // Filtra itens desta oferta que estão selecionados no mapa global
-  const selectedItemIds = useMemo(() => {
+  // IDs desta oferta (OFFER_ITEM_ID) que estão selecionados NO MAPA GLOBAL (que usa DEMAND_ITEM_ID)
+  const selectedOfferItemIds = useMemo(() => {
     return offer.items
-      ?.filter(item => selectionMap[item.id] === offer.id)
+      ?.filter(item => {
+        const dId = demandItemByDescription[item.description.trim().toLowerCase()];
+        return dId && selectionMap[dId] === offer.id;
+      })
       .map(item => item.id) || [];
-  }, [offer.items, selectionMap, offer.id]);
+  }, [offer.items, selectionMap, offer.id, demandItemByDescription]);
 
   const handleAccept = async () => {
-    if (selectedItemIds.length === 0) {
+    if (selectedOfferItemIds.length === 0) {
       alert("Por favor, selecione pelo menos um item para fechar o pedido.");
       return;
     }
 
-    const confirmMsg = selectedItemIds.length === offer.items?.length
+    const confirmMsg = selectedOfferItemIds.length === offer.items?.length
       ? 'Confirmar o fechamento deste negócio com este fornecedor?'
-      : `Confirmar o fechamento de ${selectedItemIds.length} itens desta proposta?`;
+      : `Confirmar o fechamento de ${selectedOfferItemIds.length} itens desta proposta?`;
 
     if (window.confirm(confirmMsg)) {
       try {
-        const orderId = await acceptOffer(offer.id, selectedItemIds);
+        const orderId = await acceptOffer(offer.id, selectedOfferItemIds);
         if (orderId) {
           setSuccessOrderId(orderId as string);
         }
@@ -124,9 +137,9 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
 
   const selectedTotal = useMemo(() => {
     return offer.items
-      ?.filter(i => selectedItemIds.includes(i.id))
+      ?.filter(i => selectedOfferItemIds.includes(i.id))
       .reduce((acc, curr) => acc + curr.totalPrice, 0) || 0;
-  }, [offer.items, selectedItemIds]);
+  }, [offer.items, selectedOfferItemIds]);
 
   const savings = referenceBudget ? referenceBudget - offer.value : null;
 
@@ -175,21 +188,21 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
           </div>
         </div>
 
-        {/* Bloco de Preço Principal - 2 Colunas para ser mais Quadrado */}
+        {/* Bloco de Preço Principal - Stacked Rows para não cortar números grandes */}
         <div className="bg-slate-50 p-4 rounded-[1.2rem] border border-slate-100 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {/* Valor Selecionado */}
-            <div className="flex flex-col min-w-0">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight whitespace-nowrap overflow-hidden text-ellipsis">Itens marcados</p>
-              <span className={`text-2xl font-black tracking-tighter leading-tight whitespace-nowrap ${offer.status === 'accepted' ? 'text-emerald-600' : 'text-slate-900'}`}>
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 pb-2">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight shrink-0">Itens marcados</p>
+              <span className={`text-xl font-black tracking-tighter leading-tight text-right ${offer.status === 'accepted' ? 'text-emerald-600' : 'text-slate-900'}`}>
                 R$ {selectedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
             {/* Valor Total da Oferta */}
-            <div className="flex flex-col text-right min-w-0">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight whitespace-nowrap overflow-hidden text-ellipsis">Total Proposta</span>
-              <span className="text-lg font-black text-slate-700 leading-tight whitespace-nowrap">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight shrink-0">Total Proposta</span>
+              <span className="text-sm font-black text-slate-700 leading-tight text-right">
                 R$ {offer.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -256,7 +269,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                 );
               }
               const isAlreadyOrdered = purchasedItemIds.has(item.id) || purchasedItemDescriptions.has(item.description.trim().toLowerCase());
-              const selectedByOfferId = selectionMap[item.id];
+              const dId = demandItemByDescription[item.description.trim().toLowerCase()];
+              const selectedByOfferId = dId ? selectionMap[dId] : undefined;
               const isSelected = selectedByOfferId === offer.id;
               const isSelectedByOther = selectedByOfferId && selectedByOfferId !== offer.id;
 
@@ -264,8 +278,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, s
                 <div
                   key={item.id}
                   onClick={() => {
-                    if (offer.status !== 'pending' || isAlreadyOrdered) return;
-                    onToggleItem?.(item.id, offer.id);
+                    if (offer.status !== 'pending' || isAlreadyOrdered || !dId) return;
+                    onToggleItem?.(dId, offer.id);
                   }}
                   className={`
                   flex items-center justify-between p-3 rounded-xl border transition-all
