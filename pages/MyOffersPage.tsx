@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useDemands } from '../context/DemandsContext';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const MyOffersPage: React.FC = () => {
   const { user } = useAuth();
-  const { offers, demands, isLoading } = useDemands();
+  const navigate = useNavigate();
+  const { offers, demands, orders, deleteOffer, isLoading } = useDemands();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todas' | 'pending' | 'accepted' | 'rejected'>('Todas');
@@ -256,12 +258,40 @@ const MyOffersPage: React.FC = () => {
                                 VER PEDIDO
                               </Link>
                             ) : (
-                              <Link
-                                to={`/demanda/${offer.demandId}`}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-bold text-xs shadow-sm"
-                              >
-                                Ver Demanda
-                              </Link>
+                              <div className="flex gap-2">
+                                {!isRejected && orders.every(o => String(o.demandId) !== String(offer.demandId)) && (
+                                  <>
+                                    <button
+                                      onClick={() => navigate(`/oferta/editar/${offer.id}`)}
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-100 transition-all font-bold text-xs"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (window.confirm('Deseja realmente excluir sua proposta?')) {
+                                          try {
+                                            await deleteOffer(offer.id);
+                                          } catch (err) {
+                                            alert('Erro ao excluir a proposta.');
+                                          }
+                                        }
+                                      }}
+                                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 transition-all font-bold text-xs"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                                      Excluir
+                                    </button>
+                                  </>
+                                )}
+                                <Link
+                                  to={`/demanda/${offer.demandId}`}
+                                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-bold text-xs shadow-sm"
+                                >
+                                  Ver Demanda
+                                </Link>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -283,15 +313,22 @@ const MyOffersPage: React.FC = () => {
                                     <span className="text-xs text-slate-500">Sua Oferta Total:</span>
                                     <span className="text-xs font-black text-primary">R$ {offer.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                   </div>
-                                  <div className={`flex justify-between items-center pt-2 border-t border-slate-100 ${diffValue > 0 ? 'text-emerald-600' : diffValue < 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Diferença:</span>
-                                    <div className="text-right">
-                                      <p className="text-xs font-black">
-                                        {diffValue >= 0 ? '+' : ''} R$ {diffValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                      </p>
-                                      <p className="text-[9px] font-bold">({diffValue >= 0 ? 'Abaixo' : 'Acima'} do budget: {diffPercent.toFixed(1)}%)</p>
+                                  {demandBudgetValue > 0 ? (
+                                    <div className={`flex justify-between items-center pt-2 border-t border-slate-100 ${diffValue > 0 ? 'text-emerald-600' : diffValue < 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                                      <span className="text-[10px] font-black uppercase tracking-widest">Diferença:</span>
+                                      <div className="text-right">
+                                        <p className="text-xs font-black">
+                                          {diffValue >= 0 ? '+' : ''} R$ {diffValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                        <p className="text-[9px] font-bold">({diffValue >= 0 ? 'Abaixo' : 'Acima'} do budget: {diffPercent.toFixed(1)}%)</p>
+                                      </div>
                                     </div>
-                                  </div>
+                                  ) : (
+                                    <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-slate-500 italic">
+                                      <span className="text-[10px] font-black uppercase tracking-widest">Negociação:</span>
+                                      <span className="text-[10px] font-bold">Valor a combinar</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 

@@ -136,10 +136,12 @@ const OfferCard: React.FC<OfferCardProps> = ({ offer, isBest, referenceBudget, d
   }, [orders, offer.demandId]);
 
   const selectedTotal = useMemo(() => {
-    return offer.items
+    const itemsTotal = offer.items
       ?.filter(i => selectedOfferItemIds.includes(i.id))
       .reduce((acc, curr) => acc + curr.totalPrice, 0) || 0;
-  }, [offer.items, selectedOfferItemIds]);
+
+    return itemsTotal > 0 ? itemsTotal + offer.shippingCost : 0;
+  }, [offer.items, selectedOfferItemIds, offer.shippingCost]);
 
   const savings = referenceBudget ? referenceBudget - offer.value : null;
 

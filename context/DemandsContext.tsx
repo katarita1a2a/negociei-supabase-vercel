@@ -19,6 +19,8 @@ interface DemandsContextType {
   updateDemand: (demand: Demand) => Promise<void>;
   deleteDemand: (id: string) => Promise<void>;
   addOffer: (offer: Offer) => Promise<void>;
+  updateOffer: (offer: Offer) => Promise<void>;
+  deleteOffer: (id: string) => Promise<void>;
   acceptOffer: (offerId: string, selectedItemIds?: string[]) => Promise<string | void>;
   rejectOffer: (offerId: string) => Promise<void>;
   resetFilters: () => void;
@@ -60,7 +62,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         // Transform database data to frontend Demand type
         const transformedDemands: Demand[] = (demandsData || []).map(d => ({
-          id: d.id.toString(),
+          id: String(d.id),
           title: d.title || 'Sem título',
           description: d.description || '',
           category: d.category || '',
@@ -104,8 +106,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         // Transform database data to frontend Offer type
         const transformedOffers: Offer[] = (offersData || []).map(o => ({
-          id: o.id,
-          demandId: o.demand_id,
+          id: String(o.id),
+          demandId: String(o.demand_id),
           sellerId: o.seller_id,
           sellerName: o.seller?.name || 'Fornecedor',
           sellerCompany: o.seller?.company_name,
@@ -145,9 +147,9 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (ordersError) throw ordersError;
 
         const transformedOrders: Order[] = (ordersData || []).map(o => ({
-          id: o.id.toString(),
-          demandId: o.demand_id.toString(),
-          offerId: o.offer_id.toString(),
+          id: String(o.id),
+          demandId: String(o.demand_id),
+          offerId: String(o.offer_id),
           buyerId: o.buyer_id,
           sellerId: o.seller_id,
           finalPrice: o.final_price,
@@ -283,6 +285,11 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const addOffer = async (offer: Offer) => {
     try {
+      const demand = demands.find(d => d.id === offer.demandId);
+      if (demand?.status === DemandStatus.FECHADO) {
+        throw new Error("Esta demanda já foi encerrada e não aceita mais propostas.");
+      }
+
       const { data: offerData, error } = await supabase
         .from('offers')
         .insert({
@@ -332,6 +339,80 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   };
 
+  const updateOffer = async (offer: Offer) => {
+    try {
+      // 1. Update main offer record
+      const { error: offerError } = await supabase
+        .from('offers')
+        .update({
+          total_price: offer.value,
+          delivery_time: offer.deadlineDays.toString(),
+          shipping_cost: offer.shippingCost,
+          warranty_months: offer.warrantyMonths,
+          payment_terms: offer.paymentTerms,
+          valid_until: offer.validUntil || null,
+          message: offer.message,
+          pdf_url: offer.pdfUrl
+        })
+        .eq('id', offer.id);
+
+      if (offerError) throw offerError;
+
+      // 2. Update Items
+      // Simplest way is to remove and re-insert items for this offer
+      // as it might be a partial update or change in item count
+      const { error: deleteError } = await supabase
+        .from('offer_items')
+        .delete()
+        .eq('offer_id', offer.id);
+
+      if (deleteError) throw deleteError;
+
+      if (offer.items && offer.items.length > 0) {
+        const itemsToInsert = offer.items.map(item => ({
+          offer_id: offer.id,
+          name: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('offer_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
+      // Update local state
+      setOffers((prev) => prev.map(o => o.id === offer.id ? offer : o));
+    } catch (error) {
+      console.error('Error updating offer:', error);
+      throw error;
+    }
+  };
+
+  const deleteOffer = async (id: string) => {
+    try {
+      const offerToDelete = offers.find(o => o.id === id);
+      const { error } = await supabase.from('offers').delete().eq('id', id);
+      if (error) throw error;
+
+      setOffers((prev) => prev.filter(o => o.id !== id));
+
+      // Update demand offer count
+      if (offerToDelete) {
+        setDemands((prev) => prev.map(d =>
+          d.id === offerToDelete.demandId ? { ...d, offersCount: Math.max(0, d.offersCount - 1) } : d
+        ));
+      }
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      throw error;
+    }
+  };
+
   const acceptOffer = async (offerId: string, selectedItemIds?: string[]) => {
     try {
       const selectedOffer = offers.find(o => o.id === offerId);
@@ -346,7 +427,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         throw new Error("Nenhum item selecionado para o pedido.");
       }
 
-      const orderTotal = itemsToOrder.reduce((acc, curr) => acc + curr.totalPrice, 0);
+      const itemsTotal = itemsToOrder.reduce((acc, curr) => acc + curr.totalPrice, 0);
+      const orderTotal = itemsTotal + (selectedOffer.shippingCost || 0);
 
       // Create Order in DB
       const { data: orderData, error: orderError } = await supabase
@@ -548,7 +630,7 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [demands, filters]);
 
   return (
-    <DemandsContext.Provider value={{ demands, filteredDemands, offers, orders, notifications, filters, isLoading, setFilters, markNotificationsAsRead, addDemand, updateDemand, deleteDemand, addOffer, acceptOffer, rejectOffer, resetFilters }}>
+    <DemandsContext.Provider value={{ demands, filteredDemands, offers, orders, notifications, filters, isLoading, setFilters, markNotificationsAsRead, addDemand, updateDemand, deleteDemand, addOffer, updateOffer, deleteOffer, acceptOffer, rejectOffer, resetFilters }}>
       {children}
     </DemandsContext.Provider>
   );

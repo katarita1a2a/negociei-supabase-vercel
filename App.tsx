@@ -12,6 +12,7 @@ import MyOffersPage from './pages/MyOffersPage';
 import MyDemandsPage from './pages/MyDemandsPage';
 import DashboardPage from './pages/DashboardPage';
 import PremiumPage from './pages/PremiumPage';
+import EditOfferPage from './pages/EditOfferPage';
 import { DemandsProvider } from './context/DemandsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -48,6 +49,7 @@ const AppContent: React.FC = () => {
         <Route path="/pedido/:orderId" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
         <Route path="/minhas-demandas" element={session ? <MyDemandsPage /> : <Navigate to="/login" replace />} />
         <Route path="/ofertas" element={session ? <MyOffersPage /> : <Navigate to="/login" replace />} />
+        <Route path="/oferta/editar/:offerId" element={session ? <EditOfferPage /> : <Navigate to="/login" replace />} />
         <Route path="/perfil" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
         {/* <Route path="/premium" element={session ? <PremiumPage /> : <Navigate to="/login" replace />} /> */}
 

@@ -51,6 +51,8 @@ const DemandOffersPage: React.FC = () => {
     if (!demand || demandOffers.length === 0) return null;
     const refBudgetStr = demand.budget?.replace(/[^\d,]/g, '').replace(',', '.') || "0";
     const refBudget = parseFloat(refBudgetStr);
+    if (isNaN(refBudget) || refBudget === 0) return { diff: 0, percent: 0, refBudget: 0 };
+
     const bestOffer = minPrice;
     const diff = refBudget - bestOffer;
     const percent = (diff / refBudget) * 100;
@@ -69,14 +71,27 @@ const DemandOffersPage: React.FC = () => {
   }, [orders, id, demand]);
 
   const globalTotal = useMemo(() => {
-    let total = 0;
+    let itemsTotal = 0;
+    const involvedOffers = new Set<string>();
+
     Object.entries(selectionMap).forEach(([itemId, offerId]) => {
       const offer = offers.find(o => o.id === offerId);
-      const item = offer?.items?.find(i => i.id === itemId);
-      if (item) total += item.totalPrice;
+      const demandItem = demand?.items?.find(di => di.id === itemId);
+      const item = offer?.items?.find(i => i.description === demandItem?.description);
+      if (item) {
+        itemsTotal += item.totalPrice;
+        involvedOffers.add(offerId as string);
+      }
     });
-    return total;
-  }, [selectionMap, offers]);
+
+    let shippingTotal = 0;
+    involvedOffers.forEach(offerId => {
+      const offer = offers.find(o => o.id === offerId);
+      shippingTotal += (offer?.shippingCost || 0);
+    });
+
+    return itemsTotal + shippingTotal;
+  }, [selectionMap, offers, demand]);
 
   if (!demand) {
     return (

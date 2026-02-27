@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Offer, Order } from '../types';
 
@@ -31,13 +31,30 @@ const ProposalsTable: React.FC<ProposalsTableProps> = ({
         return acc;
     }, {} as Record<string, number>);
 
-    // Total Geral do Investimento (Soma de tudo selecionado em todos os fornecedores)
-    const globalInvestment = Object.entries(selectionMap).reduce((acc, [itemId, offerId]) => {
-        const offer = offers.find(o => o.id === offerId);
-        const demandItem = demandItems.find(di => di.id === itemId);
-        const item = offer?.items?.find(i => i.description === demandItem?.description);
-        return acc + (item?.totalPrice || 0);
-    }, 0);
+    // Total Geral do Investimento (Soma de tudo selecionado em todos os fornecedores + Fretes aplicáveis)
+    const globalInvestment = useMemo(() => {
+        let itemsTotal = 0;
+        const involvedOffers = new Set<string>();
+
+        Object.entries(selectionMap).forEach(([itemId, offerId]) => {
+            const offer = offers.find(o => o.id === offerId);
+            const demandItem = demandItems.find(di => di.id === itemId);
+            const item = offer?.items?.find(i => i.description === demandItem?.description);
+            if (item) {
+                itemsTotal += (item.totalPrice || 0);
+                involvedOffers.add(offerId as string);
+            }
+        });
+
+        // Adicionar o frete de cada fornecedor que tem pelo menos um item selecionado
+        let shippingTotal = 0;
+        involvedOffers.forEach((offerId: string) => {
+            const offer = offers.find(o => o.id === offerId);
+            shippingTotal += (offer?.shippingCost || 0);
+        });
+
+        return itemsTotal + shippingTotal;
+    }, [selectionMap, offers, demandItems]);
 
     return (
         <div className="space-y-6">
@@ -175,13 +192,19 @@ const ProposalsTable: React.FC<ProposalsTableProps> = ({
                                     return sum;
                                 }, 0);
 
+                                const hasSelection = selectedFromThisOffer > 0;
+                                const subtotalWithShipping = hasSelection ? selectedFromThisOffer + offer.shippingCost : 0;
+
                                 return (
                                     <td key={`selected-total-${offer.id}`} className="px-6 py-4">
                                         <div className={`flex flex-col ${selectedFromThisOffer > 0 ? 'animate-in fade-in zoom-in duration-300' : 'opacity-30'}`}>
-                                            <span className={`text-lg font-black tracking-tight ${selectedFromThisOffer > 0 ? 'text-primary' : 'text-slate-400'}`}>
-                                                R$ {selectedFromThisOffer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <span className={`text-lg font-black tracking-tight ${hasSelection ? 'text-primary' : 'text-slate-400'}`}>
+                                                R$ {subtotalWithShipping.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
-                                            {selectedFromThisOffer > 0 && (
+                                            {hasSelection && offer.shippingCost > 0 && (
+                                                <span className="text-[8px] font-bold text-slate-400 uppercase">Incluindo R$ {offer.shippingCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de frete</span>
+                                            )}
+                                            {hasSelection && (
                                                 <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Pronto para aceitar</span>
                                             )}
                                         </div>

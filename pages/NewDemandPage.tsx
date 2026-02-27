@@ -5,6 +5,7 @@ import { DemandItem, Demand, DemandStatus } from '../types';
 import { useDemands } from '../context/DemandsContext';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, BR_STATES } from '../mockData';
+import { formatCurrencyBRL, parseCurrencyBRL, maskCurrencyBRL } from '../utils/currencyUtils';
 
 const UNIT_OPTIONS = [
   { value: 'un', label: 'Unidade (un)' },
@@ -45,6 +46,8 @@ const NewDemandPage: React.FC = () => {
   const [items, setItems] = useState<DemandItem[]>([
     { id: crypto.randomUUID(), description: '', unit: 'un', quantity: 1, unitPrice: 0, totalPrice: 0 },
   ]);
+  const [itemPriceInputs, setItemPriceInputs] = useState<Record<string, string>>({});
+  const [shippingInput, setShippingInput] = useState("");
 
   useEffect(() => {
     if (isEditing) {
@@ -66,7 +69,15 @@ const NewDemandPage: React.FC = () => {
           const [d, m, y] = existingDemand.deadline.split('/');
           setDeliveryDate(`${y}-${m}-${d}`);
         }
-        if (existingDemand.items) setItems(existingDemand.items);
+        if (existingDemand.items) {
+          setItems(existingDemand.items);
+          const initialInputs: Record<string, string> = {};
+          existingDemand.items.forEach(item => {
+            initialInputs[item.id] = item.unitPrice ? maskCurrencyBRL(item.unitPrice.toString().replace('.', ',')) : "";
+          });
+          setItemPriceInputs(initialInputs);
+        }
+        setShippingInput(existingDemand.shippingCost ? maskCurrencyBRL(existingDemand.shippingCost.toString().replace('.', ',')) : "");
       }
     }
   }, [isEditing, id, demands]);
@@ -282,7 +293,18 @@ const NewDemandPage: React.FC = () => {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço Est.</span>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">R$</span>
-                      <input type="number" step="0.01" value={item.unitPrice || 0} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} className="form-input w-full rounded-xl border-slate-200 h-12 pl-8 pr-3 text-sm font-black text-slate-900" />
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={itemPriceInputs[item.id] ?? ""}
+                        onChange={(e) => {
+                          const masked = maskCurrencyBRL(e.target.value);
+                          const numeric = parseCurrencyBRL(masked);
+                          setItemPriceInputs(prev => ({ ...prev, [item.id]: masked }));
+                          updateItem(item.id, 'unitPrice', numeric);
+                        }}
+                        className="form-input w-full rounded-xl border-slate-200 h-12 pl-8 pr-3 text-sm font-black text-slate-900"
+                      />
                     </div>
                   </div>
 
@@ -338,7 +360,18 @@ const NewDemandPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="relative w-48">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">R$</span>
-                    <input type="number" step="0.01" value={shippingCost} onChange={(e) => setShippingCost(Number(e.target.value))} className="w-full h-14 bg-white/5 border-none rounded-2xl pl-11 pr-5 text-xl font-black text-white focus:ring-2 focus:ring-primary-green transition-all" />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={shippingInput}
+                      onChange={(e) => {
+                        const masked = maskCurrencyBRL(e.target.value);
+                        const numeric = parseCurrencyBRL(masked);
+                        setShippingInput(masked);
+                        setShippingCost(numeric);
+                      }}
+                      className="w-full h-14 bg-white/5 border-none rounded-2xl pl-11 pr-5 text-xl font-black text-white focus:ring-2 focus:ring-primary-green transition-all"
+                    />
                   </div>
                   <button type="button" onClick={() => setShippingCost(0)} className={`h-14 px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border ${shippingCost === 0 ? 'bg-primary-green text-slate-900 border-primary-green' : 'bg-transparent text-slate-400 border-white/10 hover:border-white/30'}`}>
                     Frete Grátis

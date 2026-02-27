@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { DemandStatus, UserRole, Offer } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import PremiumBadge from '../components/PremiumBadge';
+import { formatCurrencyBRL, parseCurrencyBRL, maskCurrencyBRL } from '../utils/currencyUtils';
 
 const DemandDetailPage: React.FC = () => {
   const { user } = useAuth();
@@ -30,12 +31,22 @@ const DemandDetailPage: React.FC = () => {
   const [pdfName, setPdfName] = useState<string | null>(null);
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Local states for inputs to allow smooth "natural" typing (e.g., typing something that isn't a valid number yet)
+  const [itemPriceInputs, setItemPriceInputs] = useState<Record<string, string>>({});
+  const [shippingInput, setShippingInput] = useState<string>("");
+
   useEffect(() => {
     if (demand?.items) {
       const initialPrices: Record<string, number> = {};
-      demand.items.forEach(item => initialPrices[item.id] = item.unitPrice || 0);
+      const initialInputs: Record<string, string> = {};
+      demand.items.forEach(item => {
+        initialPrices[item.id] = item.unitPrice || 0;
+        initialInputs[item.id] = item.unitPrice ? maskCurrencyBRL(item.unitPrice.toString().replace('.', ',')) : "";
+      });
       setItemPrices(initialPrices);
+      setItemPriceInputs(initialInputs);
       setShippingCost(demand.shippingCost || 0);
+      setShippingInput(demand.shippingCost ? maskCurrencyBRL(demand.shippingCost.toString().replace('.', ',')) : "");
     }
     if (demand?.images && demand.images.length > 0) {
       setActiveImage(demand.images[0]);
@@ -329,7 +340,7 @@ const DemandDetailPage: React.FC = () => {
 
         {/* ÁREA DE OFERTA COMPACTA */}
         {user ? (
-          isSeller && !isOwner && (
+          isSeller && !isOwner && demand.status !== DemandStatus.FECHADO && (
             <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-elegant overflow-hidden animate-in slide-in-from-bottom-4 duration-500 mt-4">
               <div className="p-10 border-b border-slate-50 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="space-y-2 text-center md:text-left">
@@ -362,10 +373,15 @@ const DemandDetailPage: React.FC = () => {
                         <div className="relative w-28">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black">R$</span>
                           <input
-                            type="number"
-                            step="0.01"
-                            value={itemPrices[item.id] || ''}
-                            onChange={(e) => setItemPrices(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                            type="text"
+                            inputMode="decimal"
+                            value={itemPriceInputs[item.id] ?? ""}
+                            onChange={(e) => {
+                              const masked = maskCurrencyBRL(e.target.value);
+                              const numeric = parseCurrencyBRL(masked);
+                              setItemPriceInputs(prev => ({ ...prev, [item.id]: masked }));
+                              setItemPrices(prev => ({ ...prev, [item.id]: numeric }));
+                            }}
                             className="w-full h-10 pl-8 pr-3 rounded-xl border-slate-200 bg-white focus:ring-primary font-black text-slate-900 text-sm transition-all text-right"
                           />
                         </div>
@@ -392,10 +408,15 @@ const DemandDetailPage: React.FC = () => {
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-black">R$</span>
                         <input
-                          type="number"
-                          step="0.01"
-                          value={shippingCost}
-                          onChange={(e) => setShippingCost(Number(e.target.value))}
+                          type="text"
+                          inputMode="decimal"
+                          value={shippingInput}
+                          onChange={(e) => {
+                            const masked = maskCurrencyBRL(e.target.value);
+                            const numeric = parseCurrencyBRL(masked);
+                            setShippingInput(masked);
+                            setShippingCost(numeric);
+                          }}
                           className="w-full h-12 pl-8 pr-4 rounded-xl border-slate-200 bg-slate-50 focus:ring-primary font-black text-slate-900 text-lg"
                         />
                       </div>
@@ -509,6 +530,18 @@ const DemandDetailPage: React.FC = () => {
               </div>
             </section>
           )
+        ) : demand.status === DemandStatus.FECHADO ? (
+          <section className="bg-slate-100 rounded-[2.5rem] p-10 mt-4 border border-slate-200">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 text-slate-500">
+              <div className="space-y-2 text-center md:text-left">
+                <div className="flex items-center gap-3 justify-center md:justify-start">
+                  <span className="material-symbols-outlined text-slate-400 text-3xl">task_alt</span>
+                  <h3 className="text-2xl font-black tracking-tight">Demanda Concluída</h3>
+                </div>
+                <p className="font-medium">Esta demanda já foi encerrada e não está mais aceitando propostas.</p>
+              </div>
+            </div>
+          </section>
         ) : (
           <section className="bg-slate-900 rounded-[2.5rem] p-10 mt-4 overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] group-hover:bg-primary/20 transition-all duration-700"></div>
