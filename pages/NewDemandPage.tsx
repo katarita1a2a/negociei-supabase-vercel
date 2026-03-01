@@ -41,6 +41,7 @@ const NewDemandPage: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<{ name: string, url: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [items, setItems] = useState<DemandItem[]>([
@@ -58,6 +59,7 @@ const NewDemandPage: React.FC = () => {
         setDescription(existingDemand.description);
         setShippingCost(existingDemand.shippingCost || 0);
         setUploadedImages(existingDemand.images || []);
+        setAttachments(existingDemand.attachments || []);
 
         const locationParts = existingDemand.location.split(', ');
         if (locationParts.length === 2) {
@@ -168,7 +170,8 @@ const NewDemandPage: React.FC = () => {
         createdAt: isEditing ? (demands.find(d => d.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
         tags: [category],
         items,
-        images: uploadedImages
+        images: uploadedImages,
+        attachments
       };
 
       if (isEditing) {
@@ -319,26 +322,70 @@ const NewDemandPage: React.FC = () => {
           </section>
 
           {/* 3. Fotos e Anexos */}
-          <section className="bg-white p-8 md:p-10 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-3xl">photo_library</span>
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Fotos de Referência</h2>
+          <section className="bg-white p-8 md:p-10 rounded-[2rem] border border-slate-200 shadow-sm space-y-10">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-3xl">photo_library</span>
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Fotos de Referência</h2>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                {uploadedImages.map((img, idx) => (
+                  <div key={idx} className="aspect-square rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden relative group">
+                    <img src={img} alt={`Ref ${idx}`} className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))} className="absolute top-2 right-2 size-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-primary hover:text-primary hover:bg-blue-50 transition-all">
+                  <span className="material-symbols-outlined text-3xl">add_a_photo</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Adicionar</span>
+                </button>
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple accept="image/*" className="hidden" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              {uploadedImages.map((img, idx) => (
-                <div key={idx} className="aspect-square rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden relative group">
-                  <img src={img} alt={`Ref ${idx}`} className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))} className="absolute top-2 right-2 size-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                    <span className="material-symbols-outlined text-sm">close</span>
-                  </button>
-                </div>
-              ))}
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-primary hover:text-primary hover:bg-blue-50 transition-all">
-                <span className="material-symbols-outlined text-3xl">add_a_photo</span>
-                <span className="text-[10px] font-black uppercase tracking-widest">Adicionar</span>
-              </button>
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple accept="image/*" className="hidden" />
+            <div className="pt-8 border-t border-slate-100 space-y-6">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-3xl">attach_file</span>
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Anexos (PDF, DOCX, Projetos)</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {attachments.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className="material-symbols-outlined text-slate-400">description</span>
+                      <span className="text-sm font-bold text-slate-700 truncate">{file.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 transition-colors">
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                ))}
+
+                <label className="flex items-center justify-center gap-3 p-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 hover:border-primary hover:text-primary hover:bg-blue-50 transition-all cursor-pointer">
+                  <span className="material-symbols-outlined">upload_file</span>
+                  <span className="text-sm font-black uppercase tracking-widest">Anexar Arquivo</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files?.length) return;
+
+                      const file = files[0];
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setAttachments(prev => [...prev, { name: file.name, url: reader.result as string }]);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-slate-400 font-medium italic">* Adicione editais, projetos, termos de referência ou qualquer documento que ajude os fornecedores.</p>
             </div>
           </section>
 

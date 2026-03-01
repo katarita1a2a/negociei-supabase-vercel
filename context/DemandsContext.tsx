@@ -87,7 +87,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
             unitPrice: item.desired_unit_price,
             totalPrice: item.total_price
           })),
-          images: d.images || []
+          images: d.images || [],
+          attachments: d.attachments || []
         }));
 
         setDemands(transformedDemands);
@@ -201,7 +202,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           estimated_price: demand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
           status: 'aberto',
           user_id: user?.id,
-          images: demand.images || []
+          images: demand.images || [],
+          attachments: demand.attachments || []
         })
         .select()
         .single();
@@ -254,7 +256,8 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
           location: updatedDemand.location,
           need_date: updatedDemand.deadline.split('/').reverse().join('-'),
           estimated_price: updatedDemand.items?.reduce((acc, curr) => acc + curr.totalPrice, 0) || 0,
-          images: updatedDemand.images || []
+          images: updatedDemand.images || [],
+          attachments: updatedDemand.attachments || []
         })
         .eq('id', updatedDemand.id);
 

@@ -263,6 +263,30 @@ const DemandDetailPage: React.FC = () => {
                     </table>
                   </div>
                 </div>
+
+                {/* Seção de Anexos */}
+                {demand.attachments && demand.attachments.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-slate-50">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Arquivos e Documentos Anexos</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {demand.attachments.map((file, idx) => (
+                        <a
+                          key={idx}
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-primary/30 hover:bg-white transition-all"
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <span className="material-symbols-outlined text-primary">description</span>
+                            <span className="text-sm font-bold text-slate-700 truncate">{file.name}</span>
+                          </div>
+                          <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">download</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </div>

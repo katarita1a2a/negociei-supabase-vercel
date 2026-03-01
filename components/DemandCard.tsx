@@ -16,6 +16,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
   const { offers } = useDemands();
   const userHasOffer = offers.some(o => o.demandId === demand.id && o.sellerId === user?.id);
   const hasImage = demand.images && demand.images.length > 0;
+  const hasAttachments = demand.attachments && demand.attachments.length > 0;
 
   return (
     <article className="group flex flex-col bg-white rounded-[1.5rem] border-2 border-slate-100 shadow-soft hover:shadow-elegant hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
@@ -30,6 +31,12 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
               }`}>
               {demand.category}
             </span>
+            {hasAttachments && (
+              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border bg-blue-50 text-primary border-blue-100 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">attach_file</span>
+                Documentos
+              </span>
+            )}
             {/* <PremiumBadge /> */}
           </div>
           <div className="flex items-start gap-2">

@@ -66,6 +66,7 @@ export interface Demand {
   tags: string[];
   items?: DemandItem[];
   images?: string[];
+  attachments?: { name: string, url: string }[];
 }
 
 export interface Offer {
