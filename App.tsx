@@ -21,11 +21,26 @@ const AuthHandler: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 1. Check for Supabase Auth Events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password');
       }
     });
+
+    // 2. Fallback: Check URL for recovery parameters (especially for HashRouter)
+    // Supabase often appends parameters after the hash or as query params
+    const checkRecovery = () => {
+      const hash = window.location.hash;
+      const search = window.location.search;
+
+      if (hash.includes('type=recovery') || hash.includes('access_token=') ||
+        search.includes('type=recovery') || search.includes('access_token=')) {
+        navigate('/reset-password');
+      }
+    };
+
+    checkRecovery();
 
     return () => {
       subscription.unsubscribe();
