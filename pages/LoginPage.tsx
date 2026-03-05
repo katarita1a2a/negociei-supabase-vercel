@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen flex bg-background-light antialiased overflow-x-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background-light antialiased overflow-x-hidden">
       {/* Coluna da Esquerda (Hero Section) - Visível apenas em Desktop */}
       <aside className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-20 bg-primary overflow-hidden">
         {/* Elementos Decorativos de Fundo */}
@@ -114,36 +114,34 @@ const LoginPage: React.FC = () => {
           Ambiente Certificado
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-8 pt-16 pb-16">
-          <div className="w-full max-w-[440px] space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 pt-6 pb-6 sm:pt-16 sm:pb-16 overflow-y-auto">
+          <div className="w-full max-w-[440px] space-y-4 sm:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Logo Centralizada e Maior */}
-            <div className="flex justify-center mb-2">
-              <Logo size="lg" className="transform scale-125 md:scale-150" />
+            <div className="flex justify-center mb-0 sm:mb-2">
+              <Logo size="lg" className="transform scale-100 sm:scale-125 md:scale-150" />
             </div>
 
-            <header className="text-center space-y-3">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
+            <header className="text-center space-y-2 sm:space-y-3">
+              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tighter">
                 {isLogin ? 'Bem-vindo de volta' : 'Faça parte da rede'}
               </h2>
-              <p className="text-slate-500 font-medium">
+              <p className="text-sm sm:text-base text-slate-500 font-medium">
                 {isLogin
                   ? 'Acesse sua conta para continuar suas negociações.'
                   : 'Cadastro gratuito e rápido. Leva menos de 1 minuto.'}
               </p>
             </header>
 
-
-
             {/* Seletor de Abas */}
-            <div className="flex bg-slate-100 p-1.5 rounded-xl">
+            <div className="flex bg-slate-100 p-1 rounded-xl">
               <button
-                className={`flex-1 py-2.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${isLogin ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition-all ${isLogin ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 onClick={() => setIsLogin(true)}
               >
                 Entrar
               </button>
               <button
-                className={`flex-1 py-2.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${!isLogin ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition-all ${!isLogin ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 onClick={() => setIsLogin(false)}
               >
                 Criar Conta
@@ -249,7 +247,7 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/20 transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-[0.1em] mt-4"
+                className="w-full h-12 sm:h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/20 transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-[10px] sm:text-xs uppercase tracking-[0.1em] mt-2 sm:mt-4"
               >
                 {loading ? (
                   <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -262,19 +260,19 @@ const LoginPage: React.FC = () => {
               </button>
             </form>
           </div>
-
-          <footer className="pt-8 flex flex-col items-center gap-6 border-t border-slate-50">
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              <span className="material-symbols-outlined text-[16px]">security</span>
-              Sua segurança em primeiro lugar
-            </div>
-            <div className="flex justify-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              <a className="hover:text-primary transition-colors" href="#">Ajuda</a>
-              <a className="hover:text-primary transition-colors" href="#">Termos</a>
-              <a className="hover:text-primary transition-colors" href="#">Privacidade</a>
-            </div>
-          </footer>
         </div>
+
+        <footer className="w-full p-6 sm:p-8 pt-6 sm:pt-8 flex flex-col items-center gap-4 border-t border-slate-50 bg-white z-10">
+          <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <span className="material-symbols-outlined text-[14px] sm:text-[16px]">security</span>
+            Sua segurança em primeiro lugar
+          </div>
+          <div className="flex justify-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <a className="hover:text-primary transition-colors" href="#">Ajuda</a>
+            <a className="hover:text-primary transition-colors" href="#">Termos</a>
+            <a className="hover:text-primary transition-colors" href="#">Privacidade</a>
+          </div>
+        </footer>
       </main>
     </div>
   );
