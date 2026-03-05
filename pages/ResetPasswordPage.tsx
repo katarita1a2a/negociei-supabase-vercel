@@ -1,76 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 const ResetPasswordPage: React.FC = () => {
-    const { session: authSession, loading: authLoading } = useAuth();
-    const [localSession, setLocalSession] = useState(authSession);
+    const { session, loading: authLoading } = useAuth();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
-    const [validating, setValidating] = useState(true);
     const navigate = useNavigate();
-    const retryRef = useRef(0);
 
-    // Sync local session with auth session
+    // Protection: If no session and fully loaded, redirect to login
     useEffect(() => {
-        if (authSession) {
-            setLocalSession(authSession);
-            setValidating(false);
-            setError(null);
+        if (!authLoading && !session && !success) {
+            navigate('/login');
         }
-    }, [authSession]);
-
-    // Enhanced session detection
-    useEffect(() => {
-        const checkSession = async () => {
-            // If the context already has it, we're good
-            if (authSession) {
-                setLocalSession(authSession);
-                setValidating(false);
-                return;
-            }
-
-            // Retry checking the session directly from Supabase a few times
-            // This handles cases where HashRouter redirects before the client finishes parsing
-            if (retryRef.current < 5) {
-                const { data } = await supabase.auth.getSession();
-                if (data.session) {
-                    setLocalSession(data.session);
-                    setValidating(false);
-                    return;
-                }
-
-                retryRef.current++;
-                setTimeout(checkSession, 800); // Wait 800ms more
-            } else if (!authLoading) {
-                // If after all retries and AuthContext finished loading we still have nothing
-                setValidating(false);
-                if (!localSession && !success) {
-                    setError('Sessão de recuperação não encontrada ou expirada. Tente solicitar um novo link pelo login.');
-                }
-            }
-        };
-
-        if (validating) {
-            checkSession();
-        }
-    }, [authLoading, authSession, validating, localSession, success]);
+    }, [authLoading, session, success, navigate]);
 
     const handleReset = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const currentSession = localSession || authSession;
-
-        if (!currentSession) {
-            setError('Sessão de autenticação ausente. Tente abrir o link do e-mail novamente.');
-            return;
-        }
 
         if (password !== confirmPassword) {
             setError('As senhas não coincidem.');
@@ -103,12 +55,11 @@ const ResetPasswordPage: React.FC = () => {
         }
     };
 
-    if (validating || (authLoading && !localSession)) {
+    if (authLoading && !success) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-background-light p-6">
                 <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Validando Sessão de Segurança...</p>
-                <p className="text-slate-400 text-[10px] mt-2 italic">Isso pode levar alguns segundos</p>
+                <p className="text-slate-500 font-bold animate-pulse text-xs uppercase tracking-widest">Validando Sessão...</p>
             </div>
         );
     }
@@ -139,7 +90,7 @@ const ResetPasswordPage: React.FC = () => {
                             <p className="text-emerald-600/80 text-xs font-medium">Você será redirecionado para o login em instantes.</p>
                         </div>
                     </div>
-                ) : (localSession || authSession ? (
+                ) : (
                     <form onSubmit={handleReset} className="space-y-6">
                         {error && (
                             <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm font-medium">
@@ -201,21 +152,7 @@ const ResetPasswordPage: React.FC = () => {
                             )}
                         </button>
                     </form>
-                ) : (
-                    <div className="space-y-6">
-                        <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-xs font-bold">
-                            <span className="material-symbols-outlined text-[20px]">error_outline</span>
-                            <span className="flex-1">{error}</span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigate('/login')}
-                            className="w-full h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black rounded-xl transition-all text-[10px] uppercase tracking-widest"
-                        >
-                            Voltar para o Login
-                        </button>
-                    </div>
-                ))}
+                )}
             </div>
         </div>
     );

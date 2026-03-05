@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'login' | 'register' | 'forgot';
+type AuthMode = 'login' | 'register' | 'forgot' | 'otp';
 
 const LoginPage: React.FC = () => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otpToken, setOtpToken] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('both');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,11 +46,19 @@ const LoginPage: React.FC = () => {
         setSuccessMsg('Confirme seu e-mail para ativar sua conta!');
         setAuthMode('login');
       } else if (authMode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + '/#/reset-password',
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+        setSuccessMsg('Código de recuperação enviado para o seu e-mail!');
+        setAuthMode('otp');
+      } else if (authMode === 'otp') {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: otpToken.trim(),
+          type: 'recovery',
         });
         if (error) throw error;
-        setSuccessMsg('Link de recuperação enviado para o seu e-mail!');
+        // After successful OTP verify for recovery, Supabase logs user in with a recovery session
+        navigate('/reset-password');
       }
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro na autenticação.');
@@ -120,17 +129,20 @@ const LoginPage: React.FC = () => {
 
             <header className="text-center space-y-2 sm:space-y-3">
               <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tighter">
-                {authMode === 'forgot' ? 'Recuperar Senha' : 'Negocie de forma simples, rápida e segura'}
+                {authMode === 'forgot' && 'Recuperar Senha'}
+                {authMode === 'otp' && 'Verificar Código'}
+                {(authMode === 'login' || authMode === 'register') && 'Negocie de forma simples, rápida e segura'}
               </h2>
               <p className="text-sm sm:text-base text-slate-500 font-medium">
                 {authMode === 'login' && 'Acesse sua conta para continuar suas negociações.'}
                 {authMode === 'register' && 'Cadastro gratuito e rápido. Leva menos de 1 minuto.'}
-                {authMode === 'forgot' && 'Informe seu e-mail para receber o link de recuperação.'}
+                {authMode === 'forgot' && 'Informe seu e-mail para receber o código de recuperação.'}
+                {authMode === 'otp' && `Insira o código de 6 dígitos enviado para ${email}.`}
               </p>
             </header>
 
             {/* Seletor de Abas */}
-            {authMode !== 'forgot' && (
+            {(authMode === 'login' || authMode === 'register') && (
               <div className="flex bg-slate-100 p-1 rounded-xl">
                 <button
                   className={`flex-1 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -178,34 +190,51 @@ const LoginPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">E-mail Corporativo</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
-                  <input
-                    required
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
-                    placeholder="nome@suaempresa.com"
-                  />
+              {authMode !== 'otp' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">E-mail Corporativo</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                      placeholder="nome@suaempresa.com"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {authMode !== 'forgot' && (
+              {authMode === 'otp' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Código de 6 Dígitos</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">passkey</span>
+                    <input
+                      required
+                      maxLength={6}
+                      value={otpToken}
+                      onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
+                      className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-center text-lg font-black tracking-[0.5em] text-slate-800"
+                      placeholder="000000"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {authMode === 'login' && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha de Acesso</label>
-                    {authMode === 'login' && (
-                      <button
-                        type="button"
-                        onClick={() => setAuthMode('forgot')}
-                        className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
-                      >
-                        Recuperar Senha
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('forgot')}
+                      className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                    >
+                      Recuperar Senha
+                    </button>
                   </div>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
@@ -231,33 +260,49 @@ const LoginPage: React.FC = () => {
               )}
 
               {authMode === 'register' && (
-                <div className="space-y-3 pt-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Tipo de Perfil</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: 'Comprador', value: 'buyer', icon: 'shopping_cart' },
-                      { label: 'Vendedor', value: 'seller', icon: 'storefront' },
-                      { label: 'Ambos', value: 'both', icon: 'handshake' }
-                    ].map(t => (
-                      <label key={t.value} className="cursor-pointer group">
-                        <input
-                          type="radio"
-                          name="role"
-                          value={t.value}
-                          checked={role === t.value}
-                          onChange={(e) => setRole(e.target.value)}
-                          className="peer sr-only"
-                        />
-                        <div className="p-3 border-2 border-slate-100 rounded-xl flex flex-col items-center gap-1.5 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all hover:border-slate-200">
-                          <span className="material-symbols-outlined text-[18px]">
-                            {t.icon}
-                          </span>
-                          <span className="text-[9px] font-black uppercase tracking-tight">{t.label}</span>
-                        </div>
-                      </label>
-                    ))}
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Senha de Acesso</label>
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
+                      <input
+                        required
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full h-12 pl-11 pr-12 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                        placeholder="••••••••"
+                      />
+                    </div>
                   </div>
-                </div>
+                  <div className="space-y-3 pt-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Tipo de Perfil</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'Comprador', value: 'buyer', icon: 'shopping_cart' },
+                        { label: 'Vendedor', value: 'seller', icon: 'storefront' },
+                        { label: 'Ambos', value: 'both', icon: 'handshake' }
+                      ].map(t => (
+                        <label key={t.value} className="cursor-pointer group">
+                          <input
+                            type="radio"
+                            name="role"
+                            value={t.value}
+                            checked={role === t.value}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="peer sr-only"
+                          />
+                          <div className="p-3 border-2 border-slate-100 rounded-xl flex flex-col items-center gap-1.5 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all hover:border-slate-200">
+                            <span className="material-symbols-outlined text-[18px]">
+                              {t.icon}
+                            </span>
+                            <span className="text-[9px] font-black uppercase tracking-tight">{t.label}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               <button
@@ -271,16 +316,21 @@ const LoginPage: React.FC = () => {
                   <>
                     {authMode === 'login' && 'Entrar na Plataforma'}
                     {authMode === 'register' && 'Começar a Negociar'}
-                    {authMode === 'forgot' && 'Enviar Link de Recuperação'}
+                    {authMode === 'forgot' && 'Enviar Código'}
+                    {authMode === 'otp' && 'Verificar Código'}
                     <span className="material-symbols-outlined text-xl">arrow_forward</span>
                   </>
                 )}
               </button>
 
-              {authMode === 'forgot' && (
+              {(authMode === 'forgot' || authMode === 'otp') && (
                 <button
                   type="button"
-                  onClick={() => setAuthMode('login')}
+                  onClick={() => {
+                    setAuthMode('login');
+                    setError(null);
+                    setSuccessMsg(null);
+                  }}
                   className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors mt-2"
                 >
                   Voltar para o Login

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import FeedPage from './pages/FeedPage';
 import NewDemandPage from './pages/NewDemandPage';
@@ -15,40 +15,6 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import EditOfferPage from './pages/EditOfferPage';
 import { DemandsProvider } from './context/DemandsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { supabase } from './lib/supabase';
-
-const AuthHandler: React.FC = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // 1. Check for Supabase Auth Events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password');
-      }
-    });
-
-    // 2. Fallback: Check URL for recovery parameters (especially for HashRouter)
-    // Supabase often appends parameters after the hash or as query params
-    const checkRecovery = () => {
-      const hash = window.location.hash;
-      const search = window.location.search;
-
-      if (hash.includes('type=recovery') || hash.includes('access_token=') ||
-        search.includes('type=recovery') || search.includes('access_token=')) {
-        navigate('/reset-password');
-      }
-    };
-
-    checkRecovery();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  return null;
-};
 
 const AppContent: React.FC = () => {
   const { session, loading } = useAuth();
@@ -66,7 +32,6 @@ const AppContent: React.FC = () => {
 
   return (
     <Router>
-      <AuthHandler />
       <Routes>
         <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
