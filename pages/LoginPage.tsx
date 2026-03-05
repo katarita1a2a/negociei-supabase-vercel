@@ -91,18 +91,6 @@ const LoginPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="pt-12 flex items-center gap-6 border-t border-white/10">
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="size-10 rounded-full border-2 border-primary bg-slate-200 overflow-hidden shadow-xl">
-                  <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
-                </div>
-              ))}
-            </div>
-            <p className="text-primary-light text-sm font-bold">
-              + de <span className="text-white">5.000 empresas</span> já estão fechando negócios.
-            </p>
-          </div>
         </div>
       </aside>
 
