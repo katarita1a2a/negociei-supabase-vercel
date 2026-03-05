@@ -116,14 +116,14 @@ const LoginPage: React.FC = () => {
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-8 pt-6 pb-6 sm:pt-16 sm:pb-16 overflow-y-auto">
           <div className="w-full max-w-[440px] space-y-4 sm:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Logo Centralizada e Maior */}
-            <div className="flex justify-center mb-0 sm:mb-2">
-              <Logo size="lg" className="transform scale-100 sm:scale-125 md:scale-150" />
+            {/* Logo Centralizada e Altamente Valorizada */}
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <Logo size="lg" className="transform scale-125 sm:scale-150 md:scale-[1.75]" />
             </div>
 
             <header className="text-center space-y-2 sm:space-y-3">
               <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tighter">
-                {isLogin ? 'Bem-vindo de volta' : 'Faça parte da rede'}
+                Negocie de forma simples, rápida e segura
               </h2>
               <p className="text-sm sm:text-base text-slate-500 font-medium">
                 {isLogin

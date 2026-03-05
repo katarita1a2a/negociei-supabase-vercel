@@ -219,100 +219,137 @@ const Layout: React.FC<LayoutProps> = ({ children, showSidebar = true }) => {
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
         )}
 
-        {/* Sidebar Clean */}
-        {showSidebar && (
-          <aside className={`
-            fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 p-8 flex flex-col gap-10 overflow-y-auto transition-transform lg:static lg:translate-x-0
-            ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-          `}>
-            <div className="lg:hidden flex justify-end mb-4">
-              <button onClick={() => setIsMobileMenuOpen(false)} className="size-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                <span className="material-symbols-outlined">close</span>
+        {/* Sidebar Clean / Mobile Drawer */}
+        <aside className={`
+          fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 p-8 flex flex-col gap-10 overflow-y-auto transition-transform
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${showSidebar ? 'lg:static lg:translate-x-0' : 'lg:hidden'}
+        `}>
+          <div className="lg:hidden flex justify-between items-center mb-4">
+            <Logo size="sm" />
+            <button onClick={() => setIsMobileMenuOpen(false)} className="size-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:bg-slate-100 italic transition-colors">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          {/* Links de Navegação Mobile */}
+          <nav className="lg:hidden flex flex-col gap-2 pt-4 border-t border-slate-50">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-4">Menu Principal</p>
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                to={link.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-4 px-4 py-3.5 rounded-xl font-bold transition-all ${location.pathname === link.path ? 'bg-primary/5 text-primary' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                <span className={`material-symbols-outlined text-[22px] ${location.pathname === link.path ? 'fill-1' : ''}`}>{link.icon}</span>
+                <span className="text-sm">{link.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          {/* Conteúdo Dinâmico Sidebar (Filtros e Botões) */}
+          {showSidebar && (
+            <>
+              {user && (
+                <Link to="/demanda/nova" className="w-full flex items-center justify-center gap-2 bg-primary text-white text-xs font-black uppercase tracking-widest py-4 px-4 rounded-xl shadow-lg shadow-primary/10 transition-all transform hover:scale-[1.02] hover:bg-primary-dark">
+                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                  Criar nova demanda
+                </Link>
+              )}
+
+              <div className="flex flex-col gap-8">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-slate-900 font-black uppercase text-[10px] tracking-widest">Filtros Avançados</h3>
+                  <button onClick={resetFilters} className="text-[10px] text-primary font-bold hover:underline">Limpar</button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* State Filter */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade (UF)</label>
+                    <select
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-bold focus:ring-primary/20 transition-all cursor-pointer"
+                      value={filters.state}
+                      onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value, city: '' }))}
+                    >
+                      <option value="">Brasil (Todos)</option>
+                      {BR_STATES.map(s => <option key={s.uf} value={s.uf}>{s.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* City Filter */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cidade</label>
+                    <select
+                      className={`w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-bold focus:ring-primary/20 transition-all cursor-pointer ${!filters.state ? 'opacity-50' : ''}`}
+                      disabled={!filters.state || isLoadingCities}
+                      value={filters.city}
+                      onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
+                    >
+                      <option value="">{isLoadingCities ? 'Carregando...' : 'Todas as Cidades'}</option>
+                      {cities.map(city => <option key={city} value={city}>{city}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categorias</label>
+                    <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2">
+                      {CATEGORIES.slice(0, 10).map((cat) => (
+                        <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={filters.categories.includes(cat)}
+                            onChange={() => toggleCategory(cat)}
+                            className="rounded border-slate-200 text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-xs font-medium text-slate-500 group-hover:text-slate-900 transition-colors">{cat}</span>
+                        </label>
+                      ))}
+                      <button className="text-[9px] font-black text-primary uppercase tracking-widest pt-2 text-left hover:underline">Ver todas as categorias</button>
+                    </div>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da Demanda</label>
+                    <div className="space-y-2">
+                      {['Todas', 'Abertas', 'Em análise'].map((st) => (
+                        <label key={st} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-primary/30 cursor-pointer transition-all">
+                          <input
+                            type="radio"
+                            name="status"
+                            checked={filters.status === st}
+                            onChange={() => setFilters(prev => ({ ...prev, status: st }))}
+                            className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{st}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Ação de Logout Mobile */}
+          {user && (
+            <div className="pt-6 border-t border-slate-50 mt-auto">
+              <button
+                onClick={() => {
+                  signOut();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-4 px-4 py-3.5 text-red-500 font-bold hover:bg-red-50 rounded-xl transition-all"
+              >
+                <span className="material-symbols-outlined text-[22px]">logout</span>
+                <span className="text-sm">Sair da Conta</span>
               </button>
             </div>
-
-            {user && (
-              <Link to="/demanda/nova" className="w-full flex items-center justify-center gap-2 bg-primary text-white text-xs font-black uppercase tracking-widest py-4 px-4 rounded-xl shadow-lg shadow-primary/10 transition-all transform hover:scale-[1.02] hover:bg-primary-dark">
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                Criar nova demanda
-              </Link>
-            )}
-
-            <div className="flex flex-col gap-8">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="text-slate-900 font-black uppercase text-[10px] tracking-widest">Filtros Avançados</h3>
-                <button onClick={resetFilters} className="text-[10px] text-primary font-bold hover:underline">Limpar</button>
-              </div>
-
-              <div className="space-y-6">
-                {/* State Filter */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade (UF)</label>
-                  <select
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-bold focus:ring-primary/20 transition-all cursor-pointer"
-                    value={filters.state}
-                    onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value, city: '' }))}
-                  >
-                    <option value="">Brasil (Todos)</option>
-                    {BR_STATES.map(s => <option key={s.uf} value={s.uf}>{s.name}</option>)}
-                  </select>
-                </div>
-
-                {/* City Filter */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cidade</label>
-                  <select
-                    className={`w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-xs font-bold focus:ring-primary/20 transition-all cursor-pointer ${!filters.state ? 'opacity-50' : ''}`}
-                    disabled={!filters.state || isLoadingCities}
-                    value={filters.city}
-                    onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
-                  >
-                    <option value="">{isLoadingCities ? 'Carregando...' : 'Todas as Cidades'}</option>
-                    {cities.map(city => <option key={city} value={city}>{city}</option>)}
-                  </select>
-                </div>
-
-                {/* Category Filter */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categorias</label>
-                  <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2">
-                    {CATEGORIES.slice(0, 10).map((cat) => (
-                      <label key={cat} className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={filters.categories.includes(cat)}
-                          onChange={() => toggleCategory(cat)}
-                          className="rounded border-slate-200 text-primary focus:ring-primary w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-xs font-medium text-slate-500 group-hover:text-slate-900 transition-colors">{cat}</span>
-                      </label>
-                    ))}
-                    <button className="text-[9px] font-black text-primary uppercase tracking-widest pt-2 text-left hover:underline">Ver todas as categorias</button>
-                  </div>
-                </div>
-
-                {/* Status Filter */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da Demanda</label>
-                  <div className="space-y-2">
-                    {['Todas', 'Abertas', 'Em análise'].map((st) => (
-                      <label key={st} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-primary/30 cursor-pointer transition-all">
-                        <input
-                          type="radio"
-                          name="status"
-                          checked={filters.status === st}
-                          onChange={() => setFilters(prev => ({ ...prev, status: st }))}
-                          className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                        />
-                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{st}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-        )}
+          )}
+        </aside>
 
         {/* Main Content */}
         <main className="flex-1 p-8 md:p-12 overflow-x-hidden">
