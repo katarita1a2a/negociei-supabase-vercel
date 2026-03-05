@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { DemandStatus, UserRole, Offer } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import PremiumBadge from '../components/PremiumBadge';
+import ImageModal from '../components/ImageModal';
 import { formatCurrencyBRL, parseCurrencyBRL, maskCurrencyBRL } from '../utils/currencyUtils';
 
 const DemandDetailPage: React.FC = () => {
@@ -26,6 +27,7 @@ const DemandDetailPage: React.FC = () => {
   );
   const [itemPrices, setItemPrices] = useState<Record<string, number>>({});
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState<string | null>(null);
@@ -202,8 +204,14 @@ const DemandDetailPage: React.FC = () => {
             {/* Galeria Compacta */}
             {demand.images && demand.images.length > 0 && (
               <section className="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
-                <div className="aspect-[21/9] w-full rounded-2xl bg-slate-50 overflow-hidden border border-slate-100">
-                  <img src={activeImage || ''} alt="Preview" className="w-full h-full object-cover" />
+                <div
+                  className="aspect-[21/9] w-full rounded-2xl bg-slate-50 overflow-hidden border border-slate-100 cursor-zoom-in group/mainimg relative"
+                  onClick={() => setIsImageModalOpen(true)}
+                >
+                  <img src={activeImage || ''} alt="Preview" className="w-full h-full object-cover group-hover/mainimg:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-black/0 group-hover/mainimg:bg-black/5 flex items-center justify-center opacity-0 group-hover/mainimg:opacity-100 transition-all duration-300">
+                    <span className="material-symbols-outlined text-white text-3xl drop-shadow-lg">zoom_in</span>
+                  </div>
                 </div>
                 {demand.images.length > 1 && (
                   <div className="flex gap-3 overflow-x-auto pb-1 px-1">
@@ -591,6 +599,12 @@ const DemandDetailPage: React.FC = () => {
         )}
 
       </div>
+
+      <ImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        imageUrl={activeImage}
+      />
     </Layout>
   );
 };
