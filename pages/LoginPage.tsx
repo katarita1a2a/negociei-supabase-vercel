@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
       } else if (authMode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw error;
-        setSuccessMsg('Código de recuperação enviado para o seu e-mail!');
+        setSuccessMsg('Um e-mail com o código de 6 dígitos foi enviado!');
         setAuthMode('otp');
       } else if (authMode === 'otp') {
         const { error } = await supabase.auth.verifyOtp({
@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
           type: 'recovery',
         });
         if (error) throw error;
-        // After successful OTP verify for recovery, Supabase logs user in with a recovery session
+        // Supabase logs the user in with a recovery session after successful verifyOtp
         navigate('/reset-password');
       }
     } catch (err: any) {
@@ -72,7 +72,6 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex flex-col lg:flex-row bg-background-light antialiased overflow-x-hidden">
       {/* Coluna da Esquerda (Hero Section) - Visível apenas em Desktop */}
       <aside className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-20 bg-primary overflow-hidden">
-        {/* Elementos Decorativos de Fundo */}
         <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-primary via-primary-dark to-primary opacity-90 z-0"></div>
         <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]"></div>
@@ -114,7 +113,6 @@ const LoginPage: React.FC = () => {
 
       {/* Coluna da Direita (Formulário) */}
       <main className="w-full lg:w-1/2 flex flex-col min-h-screen relative bg-white">
-        {/* Badge de Segurança (Discreto) */}
         <div className="absolute top-8 right-8 z-20 hidden sm:flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
           <span className="material-symbols-outlined text-[16px] text-emerald-500">verified</span>
           Ambiente Certificado
@@ -122,7 +120,6 @@ const LoginPage: React.FC = () => {
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-8 pt-6 pb-6 sm:pt-16 sm:pb-16 overflow-y-auto">
           <div className="w-full max-w-[440px] space-y-4 sm:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Logo Centralizada e Altamente Valorizada */}
             <div className="flex justify-center mb-4 sm:mb-6">
               <Logo size="lg" className="transform scale-125 sm:scale-150 md:scale-[1.75]" />
             </div>
@@ -136,8 +133,8 @@ const LoginPage: React.FC = () => {
               <p className="text-sm sm:text-base text-slate-500 font-medium">
                 {authMode === 'login' && 'Acesse sua conta para continuar suas negociações.'}
                 {authMode === 'register' && 'Cadastro gratuito e rápido. Leva menos de 1 minuto.'}
-                {authMode === 'forgot' && 'Informe seu e-mail para receber o código de recuperação.'}
-                {authMode === 'otp' && `Insira o código de 6 dígitos enviado para ${email}.`}
+                {authMode === 'forgot' && 'Digite seu e-mail para receber o código de 6 dígitos.'}
+                {authMode === 'otp' && 'Abra seu e-mail e digite o código de 6 dígitos abaixo.'}
               </p>
             </header>
 
@@ -215,6 +212,7 @@ const LoginPage: React.FC = () => {
                     <input
                       required
                       maxLength={6}
+                      autoFocus
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
                       className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-center text-lg font-black tracking-[0.5em] text-slate-800"
@@ -330,6 +328,7 @@ const LoginPage: React.FC = () => {
                     setAuthMode('login');
                     setError(null);
                     setSuccessMsg(null);
+                    setOtpToken('');
                   }}
                   className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors mt-2"
                 >

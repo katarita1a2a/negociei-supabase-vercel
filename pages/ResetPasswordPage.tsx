@@ -14,7 +14,8 @@ const ResetPasswordPage: React.FC = () => {
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
 
-    // Protection: If no session and fully loaded, redirect to login
+    // Proteção: Se não houver sessão e o carregamento terminou, volta para o login
+    // Isso acontece se alguém tentar acessar a página sem digitar o código antes
     useEffect(() => {
         if (!authLoading && !session && !success) {
             navigate('/login');
