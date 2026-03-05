@@ -12,6 +12,7 @@ import MyOffersPage from './pages/MyOffersPage';
 import MyDemandsPage from './pages/MyDemandsPage';
 import DashboardPage from './pages/DashboardPage';
 import PremiumPage from './pages/PremiumPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import EditOfferPage from './pages/EditOfferPage';
 import { DemandsProvider } from './context/DemandsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -34,6 +35,7 @@ const AppContent: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Public Routes */}
         <Route path="/" element={<FeedPage />} />
