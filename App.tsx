@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import FeedPage from './pages/FeedPage';
 import NewDemandPage from './pages/NewDemandPage';
@@ -16,6 +15,25 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import EditOfferPage from './pages/EditOfferPage';
 import { DemandsProvider } from './context/DemandsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { supabase } from './lib/supabase';
+
+const AuthHandler: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  return null;
+};
 
 const AppContent: React.FC = () => {
   const { session, loading } = useAuth();
@@ -33,6 +51,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Router>
+      <AuthHandler />
       <Routes>
         <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
