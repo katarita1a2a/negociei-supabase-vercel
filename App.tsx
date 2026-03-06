@@ -66,11 +66,16 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Se o usuário estiver logado e tentar acessar o /login, 
+  // nós o mandamos para o dashboard, A MENOS que tenha indícios de recuperação na URL.
+  const isRecovering = window.location.hash.includes('type=recovery') ||
+    window.location.hash.includes('access_token=');
+
   return (
     <Router>
       <AuthHandler />
       <Routes>
-        <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/" replace />} />
+        <Route path="/login" element={(session && !isRecovering) ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Public Routes */}
