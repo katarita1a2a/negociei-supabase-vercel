@@ -31,10 +31,23 @@ const LoginPage: React.FC = () => {
 
   // Se o usuário clicar no link do e-mail (ou o link for pré-validado pelo navegador/scanner)
   // o Supabase já terá logado ele. Se estivermos na tela de OTP, mandamos ele 
-  // direto para o reset em vez de ficar preso.
+  // direto para o reset em vez de ficar preso vendo erro de "expirado".
   useEffect(() => {
+    const checkBgSession = async () => {
+      if (authMode === 'otp') {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession) {
+          console.log("Sessão ativa detectada durante OTP. Pulando para reset...");
+          navigate('/reset-password');
+        }
+      }
+    };
+
+    // Checa quando o modo muda
+    checkBgSession();
+
+    // Checa quando a sessão do contexto muda
     if (session && authMode === 'otp') {
-      console.log("Sessão ativa detectada durante OTP. Redirecionando...");
       navigate('/reset-password');
     }
   }, [session, authMode, navigate]);
@@ -69,29 +82,34 @@ const LoginPage: React.FC = () => {
         setSuccessMsg('Confirme seu e-mail para ativar sua conta!');
         setAuthMode('login');
       } else if (authMode === 'forgot') {
-        if (!cleanEmail) throw new Error('Por favor, digite seu e-mail.');
+        if (!cleanEmail) throw new Error('Campo e-mail é obrigatório.');
+
+        // LIMPEZA: Força um logout antes de pedir recuperação para evitar conflitos de sessão
+        await supabase.auth.signOut();
+
         const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
         if (error) throw error;
-        setSuccessMsg('Um e-mail com o código de 6 dígitos foi enviado!');
+        setSuccessMsg('Código de 6 dígitos enviado com sucesso!');
         setAuthMode('otp');
         setResendTimer(60);
+        setOtpToken('');
       } else if (authMode === 'otp') {
-        if (!otpToken) throw new Error('Por favor, digite o código de 6 dígitos.');
+        if (!otpToken || otpToken.length < 6) throw new Error('Digite o código de 6 dígitos completo.');
 
-        // Tenta verificar o OTP
+        // 1. Tenta verificar o OTP
         const { error: verifyError } = await supabase.auth.verifyOtp({
           email: cleanEmail,
           token: otpToken.trim(),
           type: 'recovery',
         });
 
+        // 2. Se falhar, fazemos a "PROVA REAL": Checamos se existe uma sessão agora.
+        // Isso salva usuários em que o Gmail/Antivírus "clicou" no link do e-mail por trás, 
+        // consumindo o token mas já logando o usuário.
         if (verifyError) {
-          // SE DER ERRO: Checamos se existe uma sessão ATIVA agora mesmo.
-          // Isso acontece se o link do e-mail foi "tocado" por um scanner de antivírus
-          // ou se o navegador pré-carregou a URL, consumindo o token mas LOGANDO o usuário.
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          if (currentSession) {
-            console.log("OTP erro mas sessão detectada. Recuperando fluxo...");
+          const { data: { session: rescuedSession } } = await supabase.auth.getSession();
+          if (rescuedSession) {
+            console.log("OTP erro, mas usuário logado detectado. Sucesso!");
             navigate('/reset-password');
             return;
           }
@@ -101,10 +119,11 @@ const LoginPage: React.FC = () => {
         navigate('/reset-password');
       }
     } catch (err: any) {
+      console.error("Erro na Auth:", err);
       if (err.message?.includes('expired') || err.message?.includes('invalid')) {
-        setError('O código expirou ou já foi usado. Tente abrir o site novamente ou pedir um novo código.');
+        setError('Código inválido ou já utilizado. Tente atualizar a página e pedir um novo se persistir.');
       } else {
-        setError(err.message || 'Ocorreu um erro na autenticação.');
+        setError(err.message || 'Ocorreu um erro. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -117,7 +136,7 @@ const LoginPage: React.FC = () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
       if (error) throw error;
-      setSuccessMsg('Um novo código foi enviado para o seu e-mail!');
+      setSuccessMsg('Um novo código foi enviado!');
       setResendTimer(60);
       setOtpToken('');
     } catch (err: any) {
@@ -130,11 +149,11 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background-light antialiased overflow-x-hidden">
-      {/* Hero Section */}
+      {/* Coluna Visual (Desktop) */}
       <aside className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-20 bg-primary overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-primary via-primary-dark to-primary opacity-90 z-0"></div>
+        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-primary via-primary-dark to-primary opacity-90"></div>
         <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="relative z-10 space-y-12 max-w-xl">
+        <div className="relative z-10 space-y-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -142,68 +161,53 @@ const LoginPage: React.FC = () => {
             </span>
             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Plataforma Online</span>
           </div>
-
-          <div className="space-y-6">
-            <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-none">
-              Sua próxima grande <span className="text-emerald-400">negociação</span> começa aqui.
+          <div>
+            <h1 className="text-6xl font-black text-white tracking-tighter leading-none mb-6">
+              Sua negociação <br /> mais <span className="text-emerald-400">eficiente.</span>
             </h1>
-            <p className="text-xl text-primary-light font-medium leading-relaxed max-w-md">
-              A plataforma segura para conectar ofertas e demandas no mercado B2B.
+            <p className="text-xl text-primary-light font-medium max-w-sm">
+              Conectamos demandas e ofertas reais com segurança e rapidez.
             </p>
-          </div>
-
-          <div className="space-y-6 pt-6">
-            {[
-              { icon: 'handshake', text: 'Negociações diretas e transparentes.' },
-              { icon: 'verified_user', text: 'Ambiente seguro com criptografia.' }
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4 group">
-                <div className="size-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/10 group-hover:bg-white/20 transition-all duration-300">
-                  <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{item.icon}</span>
-                </div>
-                <span className="text-white font-bold text-lg">{item.text}</span>
-              </div>
-            ))}
           </div>
         </div>
       </aside>
 
-      {/* Formulário */}
+      {/* Coluna Formulário */}
       <main className="w-full lg:w-1/2 flex flex-col min-h-screen relative bg-white">
         <div className="flex-1 flex items-center justify-center p-6 sm:p-8 overflow-y-auto">
-          <div className="w-full max-w-[440px] space-y-6">
-            <div className="flex justify-center mb-6">
-              <Logo size="lg" className="transform scale-125 sm:scale-150" />
+          <div className="w-full max-w-[440px] space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex justify-center">
+              <Logo size="lg" className="transform scale-150" />
             </div>
 
-            <header className="text-center space-y-3">
-              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tighter">
+            <header className="text-center space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">
+                {authMode === 'login' && 'Bem-vindo de volta'}
+                {authMode === 'register' && 'Crie sua conta'}
                 {authMode === 'forgot' && 'Recuperar Senha'}
                 {authMode === 'otp' && 'Verificar Código'}
-                {(authMode === 'login' || authMode === 'register') && 'Bem-vindo de volta'}
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 font-medium">
+              <p className="text-sm text-slate-500 font-medium">
                 {authMode === 'login' && 'Acesse sua conta para continuar.'}
-                {authMode === 'register' && 'Crie sua conta agora.'}
-                {authMode === 'forgot' && 'Digite seu e-mail para receber o código.'}
-                {authMode === 'otp' && 'Digite o código de 6 dígitos enviado para:'}
+                {authMode === 'register' && 'Junte-se a milhares de negociadores.'}
+                {authMode === 'forgot' && 'Enviaremos um código de 6 dígitos.'}
+                {authMode === 'otp' && 'Confirme o código enviado para:'}
               </p>
-
               {authMode === 'otp' && (
-                <div className="mt-2 text-primary font-black text-sm uppercase tracking-wider">{email}</div>
+                <div className="mt-2 text-primary font-black text-sm uppercase tracking-widest">{email}</div>
               )}
             </header>
 
             {(authMode === 'login' || authMode === 'register') && (
               <div className="flex bg-slate-100 p-1 rounded-xl">
                 <button
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   onClick={() => setAuthMode('login')}
                 >
                   Entrar
                 </button>
                 <button
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'register' ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'register' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   onClick={() => setAuthMode('register')}
                 >
                   Criar Conta
@@ -212,14 +216,14 @@ const LoginPage: React.FC = () => {
             )}
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-xs font-medium animate-bounce-subtle">
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold animate-shake">
                 <span className="material-symbols-outlined text-[18px]">report</span>
                 {error}
               </div>
             )}
 
             {successMsg && (
-              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 text-emerald-600 text-xs font-medium">
+              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-600 text-xs font-bold">
                 <span className="material-symbols-outlined text-[18px]">verified</span>
                 {successMsg}
               </div>
@@ -248,7 +252,7 @@ const LoginPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
-                    placeholder="nome@empresa.com"
+                    placeholder="exemplo@suaempresa.com"
                   />
                 </div>
               )}
@@ -256,24 +260,23 @@ const LoginPage: React.FC = () => {
               {authMode === 'otp' && (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 text-center block">Código de 6 Dígitos</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 text-center block">Código Verificador</label>
                     <input
                       required
                       maxLength={6}
                       autoFocus
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
-                      className="w-full h-14 rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-3xl font-black tracking-[0.4em] text-slate-800"
+                      className="w-full h-16 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-4xl font-black tracking-[0.3em] text-slate-900"
                       placeholder="000000"
                     />
                   </div>
-
-                  <div className="flex justify-center gap-4">
+                  <div className="flex items-center justify-center gap-4">
                     <button
                       type="button"
                       disabled={resendTimer > 0 || loading}
                       onClick={handleResendOtp}
-                      className="text-[10px] font-black text-primary hover:text-primary-dark uppercase tracking-widest disabled:text-slate-300 transition-colors"
+                      className="text-[10px] font-black text-primary uppercase tracking-widest disabled:text-slate-300 hover:text-primary-dark transition-colors"
                     >
                       {resendTimer > 0 ? `Reenviar em ${resendTimer}s` : 'Reenviar Código'}
                     </button>
@@ -281,7 +284,7 @@ const LoginPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setAuthMode('forgot')}
-                      className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors"
+                      className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
                     >
                       Trocar E-mail
                     </button>
@@ -292,8 +295,8 @@ const LoginPage: React.FC = () => {
               {authMode === 'login' && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha</label>
-                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">Esqueci a senha</button>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha de Acesso</label>
+                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">Esqueci minha senha</button>
                   </div>
                   <div className="relative">
                     <input
@@ -304,11 +307,7 @@ const LoginPage: React.FC = () => {
                       className="w-full h-12 pl-4 pr-12 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
                       placeholder="••••••••"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    >
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       <span className="material-symbols-outlined text-[18px]">{showPassword ? 'visibility' : 'visibility_off'}</span>
                     </button>
                   </div>
@@ -318,7 +317,7 @@ const LoginPage: React.FC = () => {
               {authMode === 'register' && (
                 <>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Senha</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Crie sua Senha</label>
                     <input
                       required
                       type={showPassword ? 'text' : 'password'}
@@ -328,7 +327,7 @@ const LoginPage: React.FC = () => {
                       placeholder="••••••••"
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 pt-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { label: 'Comprador', value: 'buyer', icon: 'shopping_cart' },
                       { label: 'Vendedor', value: 'seller', icon: 'storefront' },
@@ -349,14 +348,14 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-widest mt-4"
+                className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-widest mt-4"
               >
                 {loading ? <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : (
                   <>
-                    {authMode === 'login' && 'Entrar'}
-                    {authMode === 'register' && 'Cadastrar'}
-                    {authMode === 'forgot' && 'Enviar Código'}
-                    {authMode === 'otp' && 'Verificar Código'}
+                    {authMode === 'login' && 'Entrar na Plataforma'}
+                    {authMode === 'register' && 'Criar minha Conta'}
+                    {authMode === 'forgot' && 'Enviar Código de Recuperação'}
+                    {authMode === 'otp' && 'Validar Código Agora'}
                     <span className="material-symbols-outlined">arrow_forward</span>
                   </>
                 )}
@@ -379,10 +378,10 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <footer className="p-8 border-t border-slate-50 flex justify-center bg-white z-10">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            <span className="material-symbols-outlined text-[16px]">verified_user</span>
-            Ambiente Certificado
+        <footer className="p-8 border-t border-slate-50 bg-white z-10">
+          <div className="flex justify-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">security</span> Criptografia SSL</span>
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">verified</span> Negociei Hub</span>
           </div>
         </footer>
       </main>
