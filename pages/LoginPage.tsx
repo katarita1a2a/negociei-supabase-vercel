@@ -134,8 +134,16 @@ const LoginPage: React.FC = () => {
                 {authMode === 'login' && 'Acesse sua conta para continuar suas negociações.'}
                 {authMode === 'register' && 'Cadastro gratuito e rápido. Leva menos de 1 minuto.'}
                 {authMode === 'forgot' && 'Digite seu e-mail para receber o código de 6 dígitos.'}
-                {authMode === 'otp' && 'Abra seu e-mail e digite o código de 6 dígitos abaixo.'}
+                {authMode === 'otp' && 'Digite o código de 6 dígitos que enviamos para seu e-mail.'}
               </p>
+              {authMode === 'otp' && (
+                <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl">
+                  <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+                    <span className="material-symbols-outlined text-[14px] align-middle mr-1">info</span>
+                    Se você vir apenas um link no e-mail, procure pelo código de 6 dígitos no texto ou certifique-se de que o template do Supabase foi atualizado com a tag <strong>{`{{ .Token }}`}</strong>.
+                  </p>
+                </div>
+              )}
             </header>
 
             {/* Seletor de Abas */}
