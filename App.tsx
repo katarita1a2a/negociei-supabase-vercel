@@ -21,28 +21,33 @@ const AuthHandler: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 1. Escuta eventos do Supabase (Ocorre quando o link é processado ou login via OTP)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Se houver rastro de recuperação na URL, força a ida para a página de reset
-      // Fazemos isso para PASSWORD_RECOVERY, SIGNED_IN ou INITIAL_SESSION se for desse tipo.
-      const isRecoveryUrl = window.location.hash.includes('type=recovery') ||
-        window.location.hash.includes('access_token=') ||
-        window.location.href.includes('type=recovery');
-
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryUrl)) {
-        navigate('/reset-password');
-      }
-    });
-
-    // 2. Checagem Manual da URL (Essencial para links clicados no e-mail no mobile)
-    const checkRecoveryParams = () => {
+    const handleRecovery = () => {
       const fullUrl = window.location.href;
-      if (fullUrl.includes('type=recovery') || fullUrl.includes('access_token=')) {
+      const isRecovery = fullUrl.includes('type=recovery') ||
+        fullUrl.includes('recovery') ||
+        fullUrl.includes('access_token=');
+
+      if (isRecovery) {
+        console.log("🛠️ AuthHandler: Recuperação detectada na URL!");
         navigate('/reset-password', { replace: true });
       }
     };
 
-    checkRecoveryParams();
+    // 1. Escuta eventos do Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log("🔔 Auth Event:", event);
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password');
+      } else if (event === 'SIGNED_IN') {
+        const fullUrl = window.location.href;
+        if (fullUrl.includes('recovery') || fullUrl.includes('access_token=')) {
+          navigate('/reset-password');
+        }
+      }
+    });
+
+    // 2. Checagem inicial de URL
+    handleRecovery();
 
     return () => {
       subscription.unsubscribe();
@@ -66,10 +71,13 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Se o usuário estiver logado e tentar acessar o /login, 
-  // nós o mandamos para o dashboard, A MENOS que tenha indícios de recuperação na URL.
-  const isRecovering = window.location.hash.includes('type=recovery') ||
-    window.location.hash.includes('access_token=');
+  // Se o usuário estiver logado e NÃO tiver rastro de recuperação na URL,
+  // nós o mandamos para o dashboard. Se HOUVER rastro de recuperação,
+  // deixamos ele no /login (LoginPage) ou para onde o AuthHandler o levar.
+  const fullUrl = window.location.href;
+  const isRecovering = fullUrl.includes('type=recovery') ||
+    fullUrl.includes('recovery') ||
+    fullUrl.includes('access_token=');
 
   return (
     <Router>

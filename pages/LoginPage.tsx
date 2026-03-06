@@ -29,23 +29,16 @@ const LoginPage: React.FC = () => {
     }
   }, [resendTimer]);
 
-  // Checagem de segurança: Se o usuário já tiver uma sessão enquanto está no modo OTP,
-  // significa que a verificação (Link ou Código) funcionou em "segundo plano" (ex: Gmail pre-fetch).
+  // REDIRECIONAMENTO AGRESSIVO:
+  // Se detectarmos uma sessão e o usuário estiver tentando recuperar senha,
+  // ou se houver qualquer rastro de recuperação na URL, mandamos para o reset.
   useEffect(() => {
-    const checkBackgroundSession = async () => {
-      if (authMode === 'otp') {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (currentSession) {
-          console.log("🎯 Sessão detectada no modo OTP! Redirecionando para reset...");
-          navigate('/reset-password');
-        }
-      }
-    };
+    const isRecoveryUrl = window.location.href.includes('recovery') ||
+      window.location.hash.includes('recovery') ||
+      window.location.hash.includes('access_token=');
 
-    checkBackgroundSession();
-
-    // Se a sessão principal do contexto mudar, também redireciona
-    if (session && authMode === 'otp') {
+    if (session && (authMode === 'otp' || isRecoveryUrl)) {
+      console.log("🚀 Sessão de recuperação detectada! Redirecionando...");
       navigate('/reset-password');
     }
   }, [session, authMode, navigate]);
@@ -56,8 +49,8 @@ const LoginPage: React.FC = () => {
     setError(null);
     setSuccessMsg(null);
 
-    // IMPORTANTE: Removemos o lowercase automático para evitar conflitos de case-sensitivity no Supabase
-    const cleanEmail = email.trim();
+    // Normalização agressiva para evitar erros de case-sensitivity
+    const cleanEmail = email.trim().toLowerCase();
 
     try {
       if (authMode === 'login') {
@@ -75,54 +68,54 @@ const LoginPage: React.FC = () => {
           },
         });
         if (regErr) throw regErr;
-        setSuccessMsg('Cadastro realizado! Clique no link enviado para seu e-mail.');
+        setSuccessMsg('Conta criada! Verifique seu e-mail para confirmar.');
         setAuthMode('login');
       } else if (authMode === 'forgot') {
-        if (!cleanEmail) throw new Error('O e-mail é obrigatório.');
+        if (!cleanEmail) throw new Error('E-mail obrigatório.');
 
-        // Limpa estado anterior antes de pedir nova recuperação
+        // Limpa qualquer sessão lixo antes de começar
         await supabase.auth.signOut();
 
         const { error: resetErr } = await supabase.auth.resetPasswordForEmail(cleanEmail);
         if (resetErr) throw resetErr;
 
-        setSuccessMsg('Código enviado! Verifique seu e-mail.');
+        setSuccessMsg('Código exclusivo enviado! Confira sua caixa de entrada.');
         setAuthMode('otp');
         setResendTimer(60);
         setOtpToken('');
       } else if (authMode === 'otp') {
-        if (!otpToken || otpToken.length < 6) throw new Error('Digite o código de 6 dígitos completo.');
+        if (!otpToken || otpToken.length < 6) throw new Error('Digite o código completo.');
 
-        // 1. Tenta validar o código
-        const { data: otpData, error: verifyError } = await supabase.auth.verifyOtp({
+        // 1. Tenta validar o código no Supabase
+        const { error: verifyError } = await supabase.auth.verifyOtp({
           email: cleanEmail,
           token: otpToken.trim(),
           type: 'recovery',
         });
 
-        // 2. Se a validação deu erro, checamos se o usuário já não está logado 
-        // (O Gmail pode ter "consumido" o token via pre-fetch do link oculto)
-        if (verifyError || !otpData?.session) {
-          const { data: { session: rescuedSession } } = await supabase.auth.getSession();
-          if (rescuedSession) {
-            console.log("🚀 Usuário logado via pre-fetch. Recuperando fluxo...");
+        // 2. SE DER ERRO: Checamos se a sessão JÁ EXISTE. 
+        // Isso é o "resgate" fundamental caso o Gmail tenha consumido o código.
+        if (verifyError) {
+          console.warn("OTP Error, checking for rescued session...", verifyError.message);
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+          if (existingSession) {
+            console.log("✅ Sessão resgatada com sucesso! Redirecionando...");
             navigate('/reset-password');
             return;
           }
-
-          if (verifyError) throw verifyError;
-          throw new Error('Não foi possível iniciar a sessão. Tente pedir um novo código.');
+          throw verifyError;
         }
 
-        // Se chegou aqui com otpData.session, a navegação ocorrerá pelos useEffects ou manualmente
         navigate('/reset-password');
       }
     } catch (err: any) {
-      console.error("Auth Failure:", err);
+      console.error("Auth Exception:", err);
+      // Mensagem amigável para o erro de expiração
       if (err.message?.includes('expired') || err.message?.includes('invalid')) {
-        setError('O código expirou ou é inválido. Se o erro persistir, peça um novo código e NÃO clique em nenhum link do e-mail.');
+        setError('O código não funcionou. Isso acontece se o Gmail clicou no link escondido antes de você. Tente clicar em "PROSSEGUIR" mais uma vez ou peça um novo código.');
       } else {
-        setError(err.message || 'Ocorreu um erro inesperado.');
+        setError(err.message || 'Erro de conexão. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -134,9 +127,9 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       await supabase.auth.signOut();
-      const { error: resendErr } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const { error: resendErr } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
       if (resendErr) throw resendErr;
-      setSuccessMsg('Um novo código de 6 dígitos foi enviado!');
+      setSuccessMsg('Um novo código de 6 dígitos chegou!');
       setResendTimer(60);
       setOtpToken('');
     } catch (err: any) {
@@ -149,68 +142,66 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 antialiased overflow-x-hidden">
-      {/* Branding Section */}
+      {/* Branding Column */}
       <aside className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-20 bg-primary overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark to-primary opacity-95"></div>
-        <div className="relative z-10 space-y-8 animate-in fade-in slide-in-from-left-8 duration-700">
+        <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Hub Negociei</span>
+            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Secure Access</span>
           </div>
-          <div className="space-y-4">
-            <h1 className="text-6xl font-black text-white tracking-tighter leading-none">
-              Negocie com <br /> <span className="text-emerald-400 text-7xl">excelência.</span>
+          <div>
+            <h1 className="text-7xl font-black text-white tracking-tighter leading-[0.9] mb-8">
+              A inteligência por trás do <span className="text-emerald-400">B2B.</span>
             </h1>
-            <p className="text-xl text-primary-light font-medium max-w-sm leading-relaxed">
-              A maior rede de conexões B2B do Brasil ao seu alcance.
+            <p className="text-xl text-primary-light font-medium max-w-sm leading-relaxed opacity-80">
+              Conectamos sua empresa às melhores oportunidades do mercado.
             </p>
           </div>
         </div>
       </aside>
 
-      {/* Auth Content */}
-      <main className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white shadow-2xl z-10">
+      {/* Main Form Area */}
+      <main className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white">
         <div className="flex-1 flex items-center justify-center p-6 sm:p-12 overflow-y-auto">
-          <div className="w-full max-w-[420px] space-y-8">
-            <div className="flex justify-center mb-8 transform hover:scale-105 transition-transform duration-300">
-              <Logo size="lg" className="transform scale-[1.7]" />
+          <div className="w-full max-w-[440px] space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="flex justify-center transform hover:scale-105 transition-transform duration-500">
+              <Logo size="lg" className="transform scale-[1.8]" />
             </div>
 
             <header className="text-center space-y-2">
               <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
                 {authMode === 'login' && 'Bem-vindo de volta'}
-                {authMode === 'register' && 'Crie sua conta'}
+                {authMode === 'register' && 'Novo Cadastro'}
                 {authMode === 'forgot' && 'Recuperar Acesso'}
-                {authMode === 'otp' && 'Validação Exclusiva'}
+                {authMode === 'otp' && 'Validação em Duas Etapas'}
               </h2>
-              <p className="text-sm text-slate-500 font-bold uppercase tracking-wide opacity-60">
-                {authMode === 'login' && 'Acesse sua conta para continuar'}
-                {authMode === 'register' && 'Rápido, fácil e transformador'}
-                {authMode === 'forgot' && 'Digite seu e-mail corporativo'}
-                {authMode === 'otp' && 'Digite o código de 6 dígitos que enviamos'}
+              <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">
+                {authMode === 'login' && 'Faça login para gerenciar suas demandas'}
+                {authMode === 'register' && 'Crie sua conta em menos de 1 minuto'}
+                {authMode === 'forgot' && 'Enviaremos um código de 6 dígitos'}
+                {authMode === 'otp' && 'Válido por 10 minutos para:'}
               </p>
-
               {authMode === 'otp' && (
-                <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-pulse">
-                  <div className="text-[10px] text-slate-400 font-black tracking-widest uppercase mb-1">E-mail de Destino</div>
-                  <div className="text-primary font-black text-base">{email}</div>
+                <div className="mt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                  <div className="text-primary font-black text-lg tracking-tight">{email}</div>
                 </div>
               )}
             </header>
 
             {(authMode === 'login' || authMode === 'register') && (
-              <div className="flex bg-slate-100 p-1.5 rounded-2xl">
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                 <button
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${authMode === 'login' ? 'bg-white text-primary shadow-lg shadow-primary/5' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${authMode === 'login' ? 'bg-white text-primary shadow-xl shadow-primary/5 ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-800'}`}
                   onClick={() => setAuthMode('login')}
                 >
-                  Fazer Login
+                  Continuar
                 </button>
                 <button
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${authMode === 'register' ? 'bg-white text-primary shadow-lg shadow-primary/5' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${authMode === 'register' ? 'bg-white text-primary shadow-xl shadow-primary/5 ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-800'}`}
                   onClick={() => setAuthMode('register')}
                 >
                   Criar Conta
@@ -219,15 +210,15 @@ const LoginPage: React.FC = () => {
             )}
 
             {error && (
-              <div className="p-5 bg-red-50 border-l-4 border-red-500 rounded-2xl flex items-start gap-3 text-red-700 text-xs font-bold shadow-sm animate-shake">
-                <span className="material-symbols-outlined text-[20px] mt-0.5">warning</span>
+              <div className="p-5 bg-red-50 border-l-4 border-red-500 rounded-2xl flex items-start gap-3 text-red-700 text-[11px] font-bold shadow-sm animate-shake">
+                <span className="material-symbols-outlined text-[20px] mt-0.5">report</span>
                 <div className="flex-1 leading-relaxed">{error}</div>
               </div>
             )}
 
             {successMsg && (
-              <div className="p-5 bg-emerald-50 border-l-4 border-emerald-500 rounded-2xl flex items-start gap-3 text-emerald-700 text-xs font-bold shadow-sm animate-in fade-in zoom-in-95">
-                <span className="material-symbols-outlined text-[20px] mt-0.5">check_circle</span>
+              <div className="p-5 bg-emerald-50 border-l-4 border-emerald-500 rounded-2xl flex items-start gap-3 text-emerald-700 text-[11px] font-bold shadow-sm">
+                <span className="material-symbols-outlined text-[20px] mt-0.5">verified_user</span>
                 <div className="flex-1 leading-relaxed">{successMsg}</div>
               </div>
             )}
@@ -235,35 +226,35 @@ const LoginPage: React.FC = () => {
             <form onSubmit={handleAuth} className="space-y-6">
               {authMode === 'register' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Nome da Empresa / Profissional</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Nome Completo</label>
                   <input
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full h-14 px-5 rounded-2xl border-2 border-slate-50 bg-slate-50 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all text-base font-bold text-slate-800"
-                    placeholder="Seu nome completo"
+                    placeholder="Seu nome"
                   />
                 </div>
               )}
 
               {authMode !== 'otp' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Seu E-mail Corporativo</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">E-mail Corporativo</label>
                   <input
                     required
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full h-14 px-5 rounded-2xl border-2 border-slate-50 bg-slate-50 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 transition-all text-base font-bold text-slate-800"
-                    placeholder="exemplo@empresa.com"
+                    placeholder="email@empresa.com"
                   />
                 </div>
               )}
 
               {authMode === 'otp' && (
-                <div className="space-y-6">
-                  <div className="space-y-2 text-center">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código de Verificação</label>
+                <div className="space-y-8">
+                  <div className="space-y-3 text-center">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digite o Código de 6 Dígitos</label>
                     <input
                       required
                       maxLength={6}
@@ -272,8 +263,8 @@ const LoginPage: React.FC = () => {
                       inputMode="numeric"
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
-                      className="w-full h-20 rounded-3xl border-4 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-5xl font-black tracking-[0.4em] text-slate-900 shadow-inner"
-                      placeholder="000000"
+                      className="w-full h-24 rounded-[32px] border-4 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-5xl font-black tracking-[0.5em] text-slate-900 shadow-inner"
+                      placeholder="••••••"
                     />
                   </div>
 
@@ -282,16 +273,17 @@ const LoginPage: React.FC = () => {
                       type="button"
                       disabled={resendTimer > 0 || loading}
                       onClick={handleResendOtp}
-                      className="text-[11px] font-black text-primary uppercase tracking-widest disabled:text-slate-300 hover:text-primary-dark transition-all transform active:scale-95"
+                      className="text-[11px] font-black text-primary uppercase tracking-widest disabled:text-slate-300 hover:text-primary-dark transition-all transform active:scale-95 flex items-center gap-2"
                     >
-                      {resendTimer > 0 ? `Novo código em ${resendTimer}s` : 'Não recebi o código'}
+                      <span className="material-symbols-outlined text-sm">refresh</span>
+                      {resendTimer > 0 ? `Novo código em ${resendTimer}s` : 'Solicitar novo código'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setAuthMode('forgot')}
                       className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
                     >
-                      Alterar e-mail de recuperação
+                      Mudar e-mail de recuperação
                     </button>
                   </div>
                 </div>
@@ -302,7 +294,7 @@ const LoginPage: React.FC = () => {
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sua Senha</label>
                     {authMode === 'login' && (
-                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline hover:text-primary-dark transition-colors">Esqueci a senha</button>
+                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline hover:text-primary-dark transition-colors">Esqueci minha senha</button>
                     )}
                   </div>
                   <div className="relative group">
@@ -322,7 +314,7 @@ const LoginPage: React.FC = () => {
               )}
 
               {authMode === 'register' && (
-                <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: 'Comprar', value: 'buyer', icon: 'shopping_cart' },
                     { label: 'Vender', value: 'seller', icon: 'storefront' },
@@ -331,8 +323,8 @@ const LoginPage: React.FC = () => {
                     <label key={t.value} className="cursor-pointer group">
                       <input type="radio" name="role" value={t.value} checked={role === t.value} onChange={(e) => setRole(e.target.value)} className="peer sr-only" />
                       <div className="p-4 border-2 border-slate-100 rounded-2xl flex flex-col items-center gap-2 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary group-hover:bg-slate-50 transition-all duration-300">
-                        <span className="material-symbols-outlined text-[22px] transform group-hover:scale-110 transition-transform">{t.icon}</span>
-                        <span className="text-[9px] font-black uppercase tracking-tight">{t.label}</span>
+                        <span className="material-symbols-outlined text-[20px] transform group-hover:scale-110 transition-transform">{t.icon}</span>
+                        <span className="text-[8px] font-black uppercase tracking-tight">{t.label}</span>
                       </div>
                     </label>
                   ))}
@@ -342,13 +334,13 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-16 bg-primary hover:bg-primary-dark text-white font-black rounded-3xl shadow-2xl shadow-primary/25 transition-all active:scale-[0.97] transform translate-y-0 hover:-translate-y-1 disabled:opacity-50 flex items-center justify-center gap-4 text-sm uppercase tracking-widest mt-6"
+                className="w-full h-16 bg-primary hover:bg-primary-dark text-white font-black rounded-3xl shadow-2xl shadow-primary/30 transition-all active:scale-[0.97] transform translate-y-0 hover:-translate-y-1 disabled:opacity-50 flex items-center justify-center gap-4 text-xs uppercase tracking-[0.2em] mt-6"
               >
                 {loading ? (
                   <div className="size-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <>
-                    <span>Prosseguir</span>
+                    <span>Confirmar Identidade</span>
                     <span className="material-symbols-outlined font-bold">arrow_forward</span>
                   </>
                 )}
@@ -364,7 +356,7 @@ const LoginPage: React.FC = () => {
                   }}
                   className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-all mt-4 p-2"
                 >
-                  Voltar para tela de Login
+                  Cancelar e voltar para o Login
                 </button>
               )}
             </form>
@@ -372,9 +364,9 @@ const LoginPage: React.FC = () => {
         </div>
 
         <footer className="p-10 border-t border-slate-50 bg-white">
-          <div className="flex justify-center gap-8 text-[11px] font-black text-slate-300 uppercase tracking-[0.2em]">
-            <span className="flex items-center gap-2 group cursor-help"><span className="material-symbols-outlined text-[18px] text-emerald-500">lock</span> Criptografia de Ponta</span>
-            <span className="flex items-center gap-2 group cursor-help"><span className="material-symbols-outlined text-[18px] text-blue-500">verified</span> KYC Validado</span>
+          <div className="flex justify-center gap-10 text-[10px] font-black text-slate-300 uppercase tracking-[0.25em]">
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-emerald-500 text-lg">verified_user</span> Criptografia B2B</span>
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-blue-500 text-lg">shield</span> Dados Protegidos</span>
           </div>
         </footer>
       </main>
