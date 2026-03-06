@@ -29,26 +29,23 @@ const LoginPage: React.FC = () => {
     }
   }, [resendTimer]);
 
-  // Se o usuário clicar no link do e-mail (ou o link for pré-validado pelo navegador/scanner)
-  // o Supabase já terá logado ele. Se estivermos na tela de OTP, mandamos ele 
-  // direto para o reset em vez de ficar preso vendo erro de "expirado".
+  // Se uma sessão ativa for detectada enquanto estamos no modo OTP,
+  // significa que o token foi validado (seja manualmente ou via link pre-fetch).
+  // Nesse caso, pulamos direto para a troca de senha.
   useEffect(() => {
-    const checkBgSession = async () => {
+    const checkSession = async () => {
       if (authMode === 'otp') {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession) {
-          console.log("Sessão ativa detectada durante OTP. Pulando para reset...");
           navigate('/reset-password');
         }
       }
     };
 
-    // Checa quando o modo muda
-    checkBgSession();
-
-    // Checa quando a sessão do contexto muda
     if (session && authMode === 'otp') {
       navigate('/reset-password');
+    } else if (authMode === 'otp') {
+      checkSession();
     }
   }, [session, authMode, navigate]);
 
@@ -62,39 +59,37 @@ const LoginPage: React.FC = () => {
 
     try {
       if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: loginError } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
-        if (error) throw error;
+        if (loginError) throw loginError;
       } else if (authMode === 'register') {
-        const { error } = await supabase.auth.signUp({
+        const { error: regError } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
-            data: {
-              full_name: name,
-              role: role,
-            },
+            data: { full_name: name, role: role },
           },
         });
-        if (error) throw error;
-        setSuccessMsg('Confirme seu e-mail para ativar sua conta!');
+        if (regError) throw regError;
+        setSuccessMsg('Cadastro realizado! Confirme seu e-mail.');
         setAuthMode('login');
       } else if (authMode === 'forgot') {
-        if (!cleanEmail) throw new Error('Campo e-mail é obrigatório.');
+        if (!cleanEmail) throw new Error('O e-mail é obrigatório.');
 
-        // LIMPEZA: Força um logout antes de pedir recuperação para evitar conflitos de sessão
+        // Garante que não há sessão pendente antes de iniciar
         await supabase.auth.signOut();
 
-        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
-        if (error) throw error;
-        setSuccessMsg('Código de 6 dígitos enviado com sucesso!');
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+        if (resetError) throw resetError;
+
+        setSuccessMsg('Código enviado! Verifique sua caixa de entrada.');
         setAuthMode('otp');
         setResendTimer(60);
         setOtpToken('');
       } else if (authMode === 'otp') {
-        if (!otpToken || otpToken.length < 6) throw new Error('Digite o código de 6 dígitos completo.');
+        if (!otpToken || otpToken.length < 6) throw new Error('Digite o código de 6 dígitos.');
 
         // 1. Tenta verificar o OTP
         const { error: verifyError } = await supabase.auth.verifyOtp({
@@ -103,13 +98,10 @@ const LoginPage: React.FC = () => {
           type: 'recovery',
         });
 
-        // 2. Se falhar, fazemos a "PROVA REAL": Checamos se existe uma sessão agora.
-        // Isso salva usuários em que o Gmail/Antivírus "clicou" no link do e-mail por trás, 
-        // consumindo o token mas já logando o usuário.
+        // 2. Fallback: Se der erro (ex: código consumido mas sessão iniciada)
         if (verifyError) {
-          const { data: { session: rescuedSession } } = await supabase.auth.getSession();
-          if (rescuedSession) {
-            console.log("OTP erro, mas usuário logado detectado. Sucesso!");
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (currentSession) {
             navigate('/reset-password');
             return;
           }
@@ -119,11 +111,11 @@ const LoginPage: React.FC = () => {
         navigate('/reset-password');
       }
     } catch (err: any) {
-      console.error("Erro na Auth:", err);
+      console.error("Auth Error:", err);
       if (err.message?.includes('expired') || err.message?.includes('invalid')) {
-        setError('Código inválido ou já utilizado. Tente atualizar a página e pedir um novo se persistir.');
+        setError('Código inválido ou já utilizado. Peça um novo se necessário.');
       } else {
-        setError(err.message || 'Ocorreu um erro. Tente novamente.');
+        setError(err.message || 'Erro na autenticação. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -134,8 +126,9 @@ const LoginPage: React.FC = () => {
     if (resendTimer > 0 || !email) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
-      if (error) throw error;
+      await supabase.auth.signOut(); // Limpa estado antes de reenviar
+      const { error: resendError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+      if (resendError) throw resendError;
       setSuccessMsg('Um novo código foi enviado!');
       setResendTimer(60);
       setOtpToken('');
@@ -148,35 +141,32 @@ const LoginPage: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background-light antialiased overflow-x-hidden">
-      {/* Coluna Visual (Desktop) */}
+    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 antialiased overflow-x-hidden">
+      {/* Lado Esquerdo - Info */}
       <aside className="hidden lg:flex lg:w-1/2 relative flex-col justify-center p-20 bg-primary overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-primary via-primary-dark to-primary opacity-90"></div>
-        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="relative z-10 space-y-12">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark to-primary opacity-95"></div>
+        <div className="relative z-10 space-y-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Plataforma Online</span>
+            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Live Platform</span>
           </div>
-          <div>
-            <h1 className="text-6xl font-black text-white tracking-tighter leading-none mb-6">
-              Sua negociação <br /> mais <span className="text-emerald-400">eficiente.</span>
-            </h1>
-            <p className="text-xl text-primary-light font-medium max-w-sm">
-              Conectamos demandas e ofertas reais com segurança e rapidez.
-            </p>
-          </div>
+          <h1 className="text-6xl font-black text-white tracking-tighter leading-none">
+            Potencialize suas <br /> <span className="text-emerald-400">negociações.</span>
+          </h1>
+          <p className="text-lg text-primary-light font-medium max-w-sm">
+            A forma mais rápida e segura de gerenciar suas demandas e ofertas.
+          </p>
         </div>
       </aside>
 
-      {/* Coluna Formulário */}
-      <main className="w-full lg:w-1/2 flex flex-col min-h-screen relative bg-white">
-        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 overflow-y-auto">
-          <div className="w-full max-w-[440px] space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex justify-center">
+      {/* Lado Direito - Form */}
+      <main className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white">
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-12 overflow-y-auto">
+          <div className="w-full max-w-[420px] space-y-8">
+            <div className="flex justify-center mb-8">
               <Logo size="lg" className="transform scale-150" />
             </div>
 
@@ -184,40 +174,40 @@ const LoginPage: React.FC = () => {
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">
                 {authMode === 'login' && 'Bem-vindo de volta'}
                 {authMode === 'register' && 'Crie sua conta'}
-                {authMode === 'forgot' && 'Recuperar Senha'}
-                {authMode === 'otp' && 'Verificar Código'}
+                {authMode === 'forgot' && 'Recuperar Acesso'}
+                {authMode === 'otp' && 'Validar Código'}
               </h2>
               <p className="text-sm text-slate-500 font-medium">
                 {authMode === 'login' && 'Acesse sua conta para continuar.'}
-                {authMode === 'register' && 'Junte-se a milhares de negociadores.'}
-                {authMode === 'forgot' && 'Enviaremos um código de 6 dígitos.'}
-                {authMode === 'otp' && 'Confirme o código enviado para:'}
+                {authMode === 'register' && 'Rápido, fácil e intuitivo.'}
+                {authMode === 'forgot' && 'Digite seu e-mail corporativo.'}
+                {authMode === 'otp' && 'Digite os 6 dígitos enviados para:'}
               </p>
               {authMode === 'otp' && (
-                <div className="mt-2 text-primary font-black text-sm uppercase tracking-widest">{email}</div>
+                <div className="mt-2 text-primary font-black text-sm">{email}</div>
               )}
             </header>
 
             {(authMode === 'login' || authMode === 'register') && (
-              <div className="flex bg-slate-100 p-1 rounded-xl">
+              <div className="flex bg-slate-100 p-1 rounded-2xl">
                 <button
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${authMode === 'login' ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}
                   onClick={() => setAuthMode('login')}
                 >
                   Entrar
                 </button>
                 <button
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${authMode === 'register' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${authMode === 'register' ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}
                   onClick={() => setAuthMode('register')}
                 >
-                  Criar Conta
+                  Cadastrar
                 </button>
               </div>
             )}
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold animate-shake">
-                <span className="material-symbols-outlined text-[18px]">report</span>
+                <span className="material-symbols-outlined text-[18px]">emergency_home</span>
                 {error}
               </div>
             )}
@@ -237,37 +227,37 @@ const LoginPage: React.FC = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
-                    placeholder="Seu nome"
+                    className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                    placeholder="Como devemos te chamar?"
                   />
                 </div>
               )}
 
               {authMode !== 'otp' && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">E-mail Corporativo</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">E-mail</label>
                   <input
                     required
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
-                    placeholder="exemplo@suaempresa.com"
+                    className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                    placeholder="seu@email.com"
                   />
                 </div>
               )}
 
               {authMode === 'otp' && (
                 <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 text-center block">Código Verificador</label>
+                  <div className="space-y-1.5 text-center">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Inserir Código</label>
                     <input
                       required
                       maxLength={6}
                       autoFocus
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, ''))}
-                      className="w-full h-16 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-4xl font-black tracking-[0.3em] text-slate-900"
+                      className="w-full h-16 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-center text-4xl font-black tracking-[0.4em] text-slate-900"
                       placeholder="000000"
                     />
                   </div>
@@ -278,7 +268,7 @@ const LoginPage: React.FC = () => {
                       onClick={handleResendOtp}
                       className="text-[10px] font-black text-primary uppercase tracking-widest disabled:text-slate-300 hover:text-primary-dark transition-colors"
                     >
-                      {resendTimer > 0 ? `Reenviar em ${resendTimer}s` : 'Reenviar Código'}
+                      {resendTimer > 0 ? `Novo código em ${resendTimer}s` : 'Reenviar Código'}
                     </button>
                     <span className="text-slate-200">|</span>
                     <button
@@ -286,17 +276,19 @@ const LoginPage: React.FC = () => {
                       onClick={() => setAuthMode('forgot')}
                       className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
                     >
-                      Trocar E-mail
+                      Mudar e-mail
                     </button>
                   </div>
                 </div>
               )}
 
-              {authMode === 'login' && (
+              {(authMode === 'login' || authMode === 'register') && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha de Acesso</label>
-                    <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">Esqueci minha senha</button>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Senha</label>
+                    {authMode === 'login' && (
+                      <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">Esqueci a senha</button>
+                    )}
                   </div>
                   <div className="relative">
                     <input
@@ -304,7 +296,7 @@ const LoginPage: React.FC = () => {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-12 pl-4 pr-12 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
+                      className="w-full h-12 pl-4 pr-12 rounded-xl border border-slate-100 bg-slate-50 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
                       placeholder="••••••••"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -315,47 +307,31 @@ const LoginPage: React.FC = () => {
               )}
 
               {authMode === 'register' && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Crie sua Senha</label>
-                    <input
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-12 px-4 rounded-xl border border-slate-100 bg-slate-50 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-bold text-slate-800"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'Comprador', value: 'buyer', icon: 'shopping_cart' },
-                      { label: 'Vendedor', value: 'seller', icon: 'storefront' },
-                      { label: 'Ambos', value: 'both', icon: 'handshake' }
-                    ].map(t => (
-                      <label key={t.value} className="cursor-pointer">
-                        <input type="radio" value={t.value} checked={role === t.value} onChange={(e) => setRole(e.target.value)} className="peer sr-only" />
-                        <div className="p-3 border-2 border-slate-100 rounded-xl flex flex-col items-center gap-1 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all">
-                          <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-                          <span className="text-[8px] font-black uppercase tracking-tight">{t.label}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </>
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  {[
+                    { label: 'Comprar', value: 'buyer', icon: 'shopping_cart' },
+                    { label: 'Vender', value: 'seller', icon: 'storefront' },
+                    { label: 'Ambos', value: 'both', icon: 'handshake' }
+                  ].map(t => (
+                    <label key={t.value} className="cursor-pointer">
+                      <input type="radio" value={t.value} checked={role === t.value} onChange={(e) => setRole(e.target.value)} className="peer sr-only" />
+                      <div className="p-3 border-2 border-slate-100 rounded-xl flex flex-col items-center gap-1 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all">
+                        <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
+                        <span className="text-[8px] font-black uppercase tracking-tight">{t.label}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-widest mt-4"
+                className="w-full h-14 bg-primary hover:bg-primary-dark text-white font-black rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-xs uppercase tracking-widest mt-4"
               >
                 {loading ? <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : (
                   <>
-                    {authMode === 'login' && 'Entrar na Plataforma'}
-                    {authMode === 'register' && 'Criar minha Conta'}
-                    {authMode === 'forgot' && 'Enviar Código de Recuperação'}
-                    {authMode === 'otp' && 'Validar Código Agora'}
+                    <span>Confirmar</span>
                     <span className="material-symbols-outlined">arrow_forward</span>
                   </>
                 )}
@@ -369,7 +345,7 @@ const LoginPage: React.FC = () => {
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors mt-2"
+                  className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors mt-4"
                 >
                   Voltar para o Login
                 </button>
@@ -378,10 +354,10 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <footer className="p-8 border-t border-slate-50 bg-white z-10">
-          <div className="flex justify-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">security</span> Criptografia SSL</span>
-            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">verified</span> Negociei Hub</span>
+        <footer className="p-8 border-t border-slate-50 flex justify-center bg-white">
+          <div className="flex items-center gap-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">verified_user</span> Seguro</span>
+            <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">terminal</span> Negociei API</span>
           </div>
         </footer>
       </main>
