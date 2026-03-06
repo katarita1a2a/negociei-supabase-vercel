@@ -21,22 +21,28 @@ const AuthHandler: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Escuta eventos de autenticação
+    // 1. Escuta eventos do Supabase (Ocorre quando o link é processado ou login via OTP)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Se detectar "Recuperação de Senha", manda direto para a página de reset
-      if (event === 'PASSWORD_RECOVERY') {
+      // Se houver rastro de recuperação na URL, força a ida para a página de reset
+      // Fazemos isso para PASSWORD_RECOVERY, SIGNED_IN ou INITIAL_SESSION se for desse tipo.
+      const isRecoveryUrl = window.location.hash.includes('type=recovery') ||
+        window.location.hash.includes('access_token=') ||
+        window.location.href.includes('type=recovery');
+
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryUrl)) {
         navigate('/reset-password');
       }
     });
 
-    // Fallback para quando o usuário abre o link do e-mail diretamente no HashRouter
-    const checkHash = () => {
-      if (window.location.hash.includes('type=recovery') || window.location.hash.includes('access_token=')) {
-        navigate('/reset-password');
+    // 2. Checagem Manual da URL (Essencial para links clicados no e-mail no mobile)
+    const checkRecoveryParams = () => {
+      const fullUrl = window.location.href;
+      if (fullUrl.includes('type=recovery') || fullUrl.includes('access_token=')) {
+        navigate('/reset-password', { replace: true });
       }
     };
 
-    checkHash();
+    checkRecoveryParams();
 
     return () => {
       subscription.unsubscribe();
@@ -75,7 +81,6 @@ const AppContent: React.FC = () => {
         <Route path="/dashboard" element={session ? <DashboardPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/nova" element={session ? <NewDemandPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/editar/:id" element={session ? <NewDemandPage /> : <Navigate to="/login" replace />} />
-        {/* Note: /demanda/:id is now public above */}
         <Route path="/demanda/:id/ofertas" element={session ? <DemandOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/demanda/:id/pedido" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
         <Route path="/pedido/:orderId" element={session ? <OrderPage /> : <Navigate to="/login" replace />} />
@@ -83,7 +88,6 @@ const AppContent: React.FC = () => {
         <Route path="/ofertas" element={session ? <MyOffersPage /> : <Navigate to="/login" replace />} />
         <Route path="/oferta/editar/:offerId" element={session ? <EditOfferPage /> : <Navigate to="/login" replace />} />
         <Route path="/perfil" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
-        {/* <Route path="/premium" element={session ? <PremiumPage /> : <Navigate to="/login" replace />} /> */}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

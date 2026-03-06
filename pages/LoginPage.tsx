@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'otp';
 
 const LoginPage: React.FC = () => {
+  const { session } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +19,15 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Se o usuário clicar no link do e-mail (ou o link for pré-validado pelo navegador)
+  // o Supabase já terá logado ele. Se estivermos na tela de OTP, mandamos ele 
+  // direto para o reset em vez de dar erro de "código inválido".
+  useEffect(() => {
+    if (session && authMode === 'otp') {
+      navigate('/reset-password');
+    }
+  }, [session, authMode, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
