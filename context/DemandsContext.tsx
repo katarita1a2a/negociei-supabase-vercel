@@ -290,21 +290,18 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (itemsError) throw itemsError;
       }
 
-      setDemands((prev) => prev.map(d => d.id === updatedDemand.id ? updatedDemand : d));
-
       // 3. Cascade updates to Offers
       // When demand quantities change, we must update all existing offers for this demand
       const affectedOffers = offers.filter(o => o.demandId === updatedDemand.id);
 
       if (affectedOffers.length > 0 && updatedDemand.items && updatedDemand.items.length > 0) {
-        const newlyUpdatedOffers: Offer[] = [];
-
         for (const offer of affectedOffers) {
           let offerModified = false;
           let newOfferTotal = offer.shippingCost || 0;
 
           const updatedOfferItems = offer.items?.map(offerItem => {
-            const matchingDemandItem = updatedDemand.items?.find(di => di.description === offerItem.description);
+            const offerItemDescObj = offerItem.description?.trim().toLowerCase();
+            const matchingDemandItem = updatedDemand.items?.find(di => di.description?.trim().toLowerCase() === offerItemDescObj);
 
             if (matchingDemandItem && matchingDemandItem.quantity !== offerItem.quantity) {
               const newQuantity = matchingDemandItem.quantity;
@@ -319,7 +316,6 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
             newOfferTotal += item.totalPrice || 0;
           });
 
-          // Even if quantities didn't change individually, total might have floating point differences, so rely on offerModified
           if (offerModified) {
             // Update the main offer total
             await supabase
@@ -340,21 +336,13 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
                   .eq('id', offerItem.id);
               }
             }
-
-            newlyUpdatedOffers.push({ ...offer, value: newOfferTotal, items: updatedOfferItems });
-          } else {
-            newlyUpdatedOffers.push(offer);
           }
         }
-
-        // Update local offers state 
-        if (newlyUpdatedOffers.length > 0) {
-          setOffers(prev => prev.map(o => {
-            const updated = newlyUpdatedOffers.find(uo => uo.id === o.id);
-            return updated ? updated : o;
-          }));
-        }
       }
+
+      // 4. Force a hard reload of the UI by redirecting so the new DB IDs sync properly
+      // We do not just do local state update anymore because demand_items ID changed.
+      window.location.reload();
 
     } catch (error) {
       console.error('Error updating demand:', error);
