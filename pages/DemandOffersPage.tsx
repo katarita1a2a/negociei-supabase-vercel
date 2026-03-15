@@ -124,7 +124,7 @@ const DemandOffersPage: React.FC = () => {
 
         {/* Floating Global Total Bar */}
         {globalTotal > 0 && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-8 duration-500 print:hidden">
             <div className="bg-slate-900 text-white px-10 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-8 border border-slate-800 backdrop-blur-xl bg-opacity-95">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total dos selecionados</span>
