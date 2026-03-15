@@ -263,8 +263,33 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       if (demandError) throw demandError;
 
-      // 2. Update Items (Complex: simpler to delete and re-insert or just update local state if persistence isn't 100% required for items edit yet)
-      // For now, let's just sync local state
+      // 2. Update Items
+      // Delete existing items for this demand
+      const { error: deleteError } = await supabase
+        .from('demand_items')
+        .delete()
+        .eq('demand_id', updatedDemand.id);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new/updated items
+      if (updatedDemand.items && updatedDemand.items.length > 0) {
+        const itemsToInsert = updatedDemand.items.map(item => ({
+          demand_id: updatedDemand.id,
+          name: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+          desired_unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('demand_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
       setDemands((prev) => prev.map(d => d.id === updatedDemand.id ? updatedDemand : d));
 
     } catch (error) {
