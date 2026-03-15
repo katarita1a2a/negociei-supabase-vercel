@@ -292,6 +292,70 @@ export const DemandsProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       setDemands((prev) => prev.map(d => d.id === updatedDemand.id ? updatedDemand : d));
 
+      // 3. Cascade updates to Offers
+      // When demand quantities change, we must update all existing offers for this demand
+      const affectedOffers = offers.filter(o => o.demandId === updatedDemand.id);
+
+      if (affectedOffers.length > 0 && updatedDemand.items && updatedDemand.items.length > 0) {
+        const newlyUpdatedOffers: Offer[] = [];
+
+        for (const offer of affectedOffers) {
+          let offerModified = false;
+          let newOfferTotal = offer.shippingCost || 0;
+
+          const updatedOfferItems = offer.items?.map(offerItem => {
+            const matchingDemandItem = updatedDemand.items?.find(di => di.description === offerItem.description);
+
+            if (matchingDemandItem && matchingDemandItem.quantity !== offerItem.quantity) {
+              const newQuantity = matchingDemandItem.quantity;
+              const newTotalPrice = newQuantity * (offerItem.unitPrice || 0);
+              offerModified = true;
+              return { ...offerItem, quantity: newQuantity, totalPrice: newTotalPrice };
+            }
+            return offerItem;
+          }) || [];
+
+          updatedOfferItems.forEach(item => {
+            newOfferTotal += item.totalPrice || 0;
+          });
+
+          // Even if quantities didn't change individually, total might have floating point differences, so rely on offerModified
+          if (offerModified) {
+            // Update the main offer total
+            await supabase
+              .from('offers')
+              .update({ total_price: newOfferTotal })
+              .eq('id', offer.id);
+
+            // Update each modified offer item in the DB
+            for (const offerItem of updatedOfferItems) {
+              const originalItem = offer.items?.find(i => i.id === offerItem.id);
+              if (originalItem && originalItem.quantity !== offerItem.quantity) {
+                await supabase
+                  .from('offer_items')
+                  .update({
+                    quantity: offerItem.quantity,
+                    total_price: offerItem.totalPrice
+                  })
+                  .eq('id', offerItem.id);
+              }
+            }
+
+            newlyUpdatedOffers.push({ ...offer, value: newOfferTotal, items: updatedOfferItems });
+          } else {
+            newlyUpdatedOffers.push(offer);
+          }
+        }
+
+        // Update local offers state 
+        if (newlyUpdatedOffers.length > 0) {
+          setOffers(prev => prev.map(o => {
+            const updated = newlyUpdatedOffers.find(uo => uo.id === o.id);
+            return updated ? updated : o;
+          }));
+        }
+      }
+
     } catch (error) {
       console.error('Error updating demand:', error);
       throw error;
