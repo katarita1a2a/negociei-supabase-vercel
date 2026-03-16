@@ -3,7 +3,7 @@
   /* Reset Geral para Impressão Horizontal */
   @page {
     size: A4 landscape;
-    margin: 10mm;
+    margin: 5mm; /* Margem reduzida para caber mais conteúdo */
   }
 
   /* Reset total do documento */
@@ -16,6 +16,8 @@
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
+    /* Reduz o zoom geral da página na impressão para afastar a imagem */
+    zoom: 0.85 !important;
   }
 
   /* Esconder elementos de interface de forma seletiva */
@@ -81,6 +83,7 @@
   .matrix-container {
     overflow: visible !important;
     width: 100% !important;
+    zoom: 0.9 !important; /* Zoom adicional na matriz para garantir que caiba */
   }
 
   .matrix-table {
