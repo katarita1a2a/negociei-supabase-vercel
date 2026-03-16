@@ -163,13 +163,43 @@ const LoginPage: React.FC = () => {
             </span>
             <span className="text-[10px] font-black text-white uppercase tracking-[0.25em]">Cloud Systems</span>
           </div>
-          <div className="space-y-6">
-            <h1 className="text-7xl font-black text-white tracking-tighter leading-[0.85]">
-              Gestão de <br /> <span className="text-emerald-400">Sucesso.</span>
+          <div className="space-y-6 animate-in slide-in-from-left-8 duration-1000">
+            <h1 className="text-5xl lg:text-6xl font-black text-white tracking-tighter leading-[1.05] max-w-lg drop-shadow-sm">
+              Sua Empresa<br /> <span className="text-emerald-400">no Controle.</span>
             </h1>
-            <p className="text-xl text-primary-light font-medium max-w-sm leading-relaxed opacity-80">
-              Transforme a maneira como sua empresa negocia e cresce.
+            <p className="text-lg lg:text-xl text-primary-light font-medium max-w-md leading-relaxed opacity-90">
+              O Marketplace Reverso B2B onde quem dita as regras é o comprador.
             </p>
+            
+            <div className="pt-8 space-y-6">
+               <div className="flex items-center gap-4 text-white hover:translate-x-2 transition-transform duration-300">
+                 <div className="size-12 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+                    <span className="material-symbols-outlined text-[24px] text-emerald-400">rocket_launch</span>
+                 </div>
+                 <div>
+                    <h3 className="font-black text-base tracking-wide">Acesso Ágil</h3>
+                    <p className="text-sm opacity-80 font-medium">Receba respostas de múltiplos fornecedores rapidamente</p>
+                 </div>
+               </div>
+               <div className="flex items-center gap-4 text-white hover:translate-x-2 transition-transform duration-300">
+                 <div className="size-12 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+                    <span className="material-symbols-outlined text-[24px] text-amber-400">query_stats</span>
+                 </div>
+                 <div>
+                    <h3 className="font-black text-base tracking-wide">Custo Efetivo</h3>
+                    <p className="text-sm opacity-80 font-medium">Fornecedores competem para oferecer o melhor negócio</p>
+                 </div>
+               </div>
+               <div className="flex items-center gap-4 text-white hover:translate-x-2 transition-transform duration-300">
+                 <div className="size-12 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+                    <span className="material-symbols-outlined text-[24px] text-blue-300">shield_lock</span>
+                 </div>
+                 <div>
+                    <h3 className="font-black text-base tracking-wide">Total Segurança</h3>
+                    <p className="text-sm opacity-80 font-medium">Ambiente corporativo auditado e confiável para B2B</p>
+                 </div>
+               </div>
+            </div>
           </div>
         </div>
       </aside>
