@@ -19,7 +19,7 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
   const hasAttachments = demand.attachments && demand.attachments.length > 0;
 
   return (
-    <article className="group flex flex-col bg-white rounded-[1.5rem] border-2 border-slate-100 shadow-soft hover:shadow-elegant hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
+    <article className={`group flex flex-col bg-white rounded-[1.5rem] border-2 border-slate-100 shadow-soft hover:shadow-elegant transition-all duration-500 overflow-hidden relative ${demand.status === 'Fechado' ? 'opacity-70 grayscale-[30%] hover:opacity-100 hover:grayscale-0' : 'hover:border-primary/40'}`}>
 
       <div className="p-5 flex flex-col h-full relative z-10">
         {/* Topo: Tags e Status */}
@@ -120,7 +120,12 @@ const DemandCard: React.FC<DemandCardProps> = ({ demand }) => {
             </div>
           </div>
 
-          {userHasOffer ? (
+          {demand.status === 'Fechado' ? (
+            <div className="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
+              <span className="material-symbols-outlined text-[16px]">lock</span>
+              Encerrada
+            </div>
+          ) : userHasOffer ? (
             <div className="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 text-[10px] font-black uppercase tracking-widest cursor-default">
               <span className="material-symbols-outlined text-[16px] fill-1">check_circle</span>
               Proposta Enviada

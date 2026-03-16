@@ -18,7 +18,7 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
   const hasImage = demand.images && demand.images.length > 0;
 
   return (
-    <article className="group flex flex-col md:flex-row items-center bg-white rounded-2xl border-2 border-slate-100 hover:border-primary/40 shadow-sm transition-all duration-300 overflow-hidden relative p-4 gap-6">
+    <article className={`group flex flex-col md:flex-row items-center bg-white rounded-2xl border-2 border-slate-100 shadow-sm transition-all duration-300 overflow-hidden relative p-4 gap-6 ${demand.status === 'Fechado' ? 'opacity-70 grayscale-[30%] hover:opacity-100 hover:grayscale-0' : 'hover:border-primary/40'}`}>
       {/* Imagem (Esquerda) */}
       <div className="relative flex-shrink-0">
         <div className="size-20 md:size-24 rounded-xl overflow-hidden border border-slate-100 shadow-inner bg-slate-50">
@@ -81,8 +81,13 @@ const DemandListItem: React.FC<DemandListItemProps> = ({ demand }) => {
           </p>
         </div>
 
-        {userHasOffer ? (
-          <div className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 text-[9px] font-black uppercase tracking-widest cursor-default">
+        {demand.status === 'Fechado' ? (
+          <div className="w-full h-10 px-6 flex items-center justify-center gap-2 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 text-[9px] font-black uppercase tracking-widest cursor-not-allowed">
+            <span className="material-symbols-outlined text-[16px]">lock</span>
+            Encerrada
+          </div>
+        ) : userHasOffer ? (
+          <div className="w-full h-10 px-6 flex items-center justify-center gap-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 text-[9px] font-black uppercase tracking-widest cursor-default">
             <span className="material-symbols-outlined text-[16px] fill-1">check_circle</span>
             Proposta Enviada
           </div>
